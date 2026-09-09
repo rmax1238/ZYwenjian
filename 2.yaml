@@ -11,7 +11,7 @@ external-controller: 127.0.0.1:9090
 subscribe-url: 
 #替换上面文字用于Stash获取机场流量信息并在主页显示
 
-proxy-providers:
+proxy-providers:http://127.0.0.1:8081/download/%E4%B8%96%E7%95%8C?target=ClashMeta&includeUnsupportedProxy=true&prettyYaml=true
   All:
     type: http
     url: "http://127.0.0.1:8081/download/%E4%B8%96%E7%95%8C?target=ClashMeta&includeUnsupportedProxy=true&prettyYaml=true"
