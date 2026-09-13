@@ -1,0 +1,323 @@
+﻿# ==============================================================================
+#  Clash 完整分流配置文件模板（基于 Loyalsoldier/clash-rules 规则集）
+#  
+#  使用说明：
+#  1. 搜索并找到下方【proxy-providers】中的 "https://app.mitce.net/?sid=875861&token=gfyxyyae"
+#  2. 将其替换为你自己的节点订阅链接（保留两边的双引号）
+#  3. 保存后在 Clash 客户端（Clash Verge Rev / Clash Party / Clash for Windows / OpenClash）中导入即可
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 基础常规设置 (General Configuration)
+# ------------------------------------------------------------------------------
+port: 7890                        # HTTP(S) 代理端口
+socks-port: 7891                  # SOCKS5 代理端口
+mixed-port: 7892                  # 混合代理端口（同时支持 HTTP 和 SOCKS5）
+allow-lan: false                  # 是否允许局域网连接
+bind-address: "*"                 # 监听地址
+mode: rule                        # 运行模式：rule (规则分流) / global (全局代理) / direct (全局直连)
+log-level: info                   # 日志级别：silent / error / warning / info / debug
+ipv6: false                       # 是否开启 IPv6 支持（若网络不支持 IPv6 建议保持 false）
+external-controller: 127.0.0.1:9090 # RESTful Web API 监听地址（提供给 Dashboard 界面使用）
+secret: ""                        # RESTful API 访问密钥（留空表示无密码）
+
+# ------------------------------------------------------------------------------
+# DNS 设置（防止 DNS 污染、提升解析速度）
+# ------------------------------------------------------------------------------
+dns:
+  enable: true
+  listen: 127.0.0.1:1053
+  ipv6: false
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  enhanced-mode: fake-ip          # 推荐 fake-ip 模式；如遇到部分游戏/特殊软件不兼容可改为 redir-host
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter:
+    - "*.lan"
+    - "localhost.ptlogin2.qq.com"
+    - "+.srv.nintendo.net"
+    - "+.stun.playstation.net"
+    - "xbox.*.microsoft.com"
+    - "+.xboxlive.com"
+  nameserver:
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+  fallback:
+    - https://dns.google/dns-query
+    - https://1.1.1.1/dns-query
+    - https://doh.opendns.com/dns-query
+  fallback-filter:
+    geoip: true
+    geoip-code: CN
+    ipcidr:
+      - 240.0.0.0/4
+
+# ------------------------------------------------------------------------------
+# 节点订阅提供商 (Proxy Providers)
+# ------------------------------------------------------------------------------
+proxy-providers:
+  # 订阅 1：主机场订阅
+  MySubscription:
+    type: http
+    # 👇👇👇【请在下方填入你的节点订阅链接】👇👇👇
+    url: "https://app.mitce.net/?sid=875861&token=gfyxyyae"
+    path: ./proxies/my_subscription.yaml # 本地缓存存储路径
+    interval: 3600                       # 自动更新订阅的时间间隔（单位：秒，3600 即 1 小时）
+    health-check:
+      enable: true
+      url: http://www.gstatic.com/generate_204
+      interval: 300                      # 自动测速检查时间间隔（单位：秒）
+
+  # 如果有备用机场或自建节点订阅，可取消下方注释启用：
+  # BackupSubscription:
+  #   type: http
+  #   url: "YOUR_BACKUP_SUBSCRIPTION_URL_HERE"
+  #   path: ./proxies/backup_subscription.yaml
+  #   interval: 3600
+  #   health-check:
+  #     enable: true
+  #     url: http://www.gstatic.com/generate_204
+  #     interval: 300
+
+# ------------------------------------------------------------------------------
+# 策略组 (Proxy Groups)
+# ------------------------------------------------------------------------------
+proxy-groups:
+  # 主代理策略：供用户手动挑选节点
+  - name: "🚀 节点选择"
+    type: select
+    use:
+      - MySubscription
+      # - BackupSubscription             # 若有多个订阅，在此取消注释即可引入
+    proxies:
+      - "♻️ 自动选择"
+      - "🔮 故障转移"
+      - "🎯 全球直连"
+
+  # 自动测速选优：自动挑选延迟最低的节点
+  - name: "♻️ 自动选择"
+    type: url-test
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    tolerance: 50                        # 延迟容差（毫秒）
+    use:
+      - MySubscription
+
+  # 故障转移：主节点宕机时自动顺延下一个
+  - name: "🔮 故障转移"
+    type: fallback
+    url: http://www.gstatic.com/generate_204
+    interval: 300
+    use:
+      - MySubscription
+
+  # 广告拦截策略
+  - name: "🛑 广告拦截"
+    type: select
+    proxies:
+      - REJECT
+      - DIRECT
+
+  # 苹果服务策略
+  - name: "🍎 苹果服务"
+    type: select
+    proxies:
+      - DIRECT
+      - "🚀 节点选择"
+      - "♻️ 自动选择"
+
+  # 微软云与 iCloud 策略
+  - name: "☁️ 微软云服务/iCloud"
+    type: select
+    proxies:
+      - DIRECT
+      - "🚀 节点选择"
+      - "♻️ 自动选择"
+
+  # 谷歌服务策略
+  - name: "🇬 谷歌服务"
+    type: select
+    proxies:
+      - "🚀 节点选择"
+      - "♻️ 自动选择"
+      - DIRECT
+
+  # 电报 Telegram 专用策略
+  - name: "📲 电报消息"
+    type: select
+    proxies:
+      - "🚀 节点选择"
+      - "♻️ 自动选择"
+
+  # 全球直连策略
+  - name: "🎯 全球直连"
+    type: select
+    proxies:
+      - DIRECT
+
+  # 漏网之鱼兜底策略（未匹配到规则的流量）
+  - name: "🐟 漏网之鱼"
+    type: select
+    proxies:
+      - "🚀 节点选择"
+      - "♻️ 自动选择"
+      - DIRECT
+
+# ------------------------------------------------------------------------------
+# 规则集提供商 (Rule Providers) - 基于 Loyalsoldier/clash-rules
+# 提示：默认使用国内高速 jsdelivr CDN 镜像，若需原版 GitHub raw 请参考注释替换
+# ------------------------------------------------------------------------------
+rule-providers:
+  # 常见需要直连的软件进程（如 BT 下载、局域网穿透等）
+  applications:
+    type: http
+    behavior: classical
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/applications.txt"
+    # GitHub 原生地址: "https://raw.githubusercontent.com/Loyalsoldier/clash-rules/release/applications.txt"
+    path: ./ruleset/loyalsoldier/applications.yaml
+    interval: 86400
+
+  # 广告域名列表
+  reject:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/reject.txt"
+    path: ./ruleset/loyalsoldier/reject.yaml
+    interval: 86400
+
+  # iCloud 域名列表
+  icloud:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/icloud.txt"
+    path: ./ruleset/loyalsoldier/icloud.yaml
+    interval: 86400
+
+  # Apple 在大陆可直连的域名列表
+  apple:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/apple.txt"
+    path: ./ruleset/loyalsoldier/apple.yaml
+    interval: 86400
+
+  # Google 域名列表
+  google:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/google.txt"
+    path: ./ruleset/loyalsoldier/google.yaml
+    interval: 86400
+
+  # 常用代理域名列表
+  proxy:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/proxy.txt"
+    path: ./ruleset/loyalsoldier/proxy.yaml
+    interval: 86400
+
+  # 国内直连域名列表
+  direct:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/direct.txt"
+    path: ./ruleset/loyalsoldier/direct.yaml
+    interval: 86400
+
+  # 私有网络专用域名列表
+  private:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/private.txt"
+    path: ./ruleset/loyalsoldier/private.yaml
+    interval: 86400
+
+  # GFWList 域名列表（黑名单常用）
+  gfw:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/gfw.txt"
+    path: ./ruleset/loyalsoldier/gfw.yaml
+    interval: 86400
+
+  # 非中国大陆使用的顶级域名列表
+  tld-not-cn:
+    type: http
+    behavior: domain
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/tld-not-cn.txt"
+    path: ./ruleset/loyalsoldier/tld-not-cn.yaml
+    interval: 86400
+
+  # Telegram IP 地址段
+  telegramcidr:
+    type: http
+    behavior: ipcidr
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/telegramcidr.txt"
+    path: ./ruleset/loyalsoldier/telegramcidr.yaml
+    interval: 86400
+
+  # 中国大陆 IP 地址段
+  cncidr:
+    type: http
+    behavior: ipcidr
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/cncidr.txt"
+    path: ./ruleset/loyalsoldier/cncidr.yaml
+    interval: 86400
+
+  # 局域网 IP 及保留 IP 段
+  lancidr:
+    type: http
+    behavior: ipcidr
+    url: "https://cdn.jsdelivr.net/gh/Loyalsoldier/clash-rules@release/lancidr.txt"
+    path: ./ruleset/loyalsoldier/lancidr.yaml
+    interval: 86400
+
+# ------------------------------------------------------------------------------
+# 路由匹配规则 (Rules) - 严格遵循 Loyalsoldier 推荐顺序
+# ------------------------------------------------------------------------------
+rules:
+  # 1. 软件特定直连（下载软件、常见直连客户端）
+  - RULE-SET,applications,🎯 全球直连
+
+  # 2. Clash 外部 Web 控制面板直连
+  - DOMAIN,clash.razord.top,🎯 全球直连
+  - DOMAIN,yacd.haishan.me,🎯 全球直连
+  - DOMAIN,metacubex.github.io,🎯 全球直连
+
+  # 3. 本地/私有域名直连
+  - RULE-SET,private,🎯 全球直连
+
+  # 4. 广告拦截
+  - RULE-SET,reject,🛑 广告拦截
+
+  # 5. iCloud 专属规则
+  - RULE-SET,icloud,☁️ 微软云服务/iCloud
+
+  # 6. Apple 专属规则
+  - RULE-SET,apple,🍎 苹果服务
+
+  # 7. Google 专属规则
+  - RULE-SET,google,🇬 谷歌服务
+
+  # 8. 常见需代理的境外网站
+  - RULE-SET,proxy,🚀 节点选择
+
+  # 9. 国内主流白名单网站直连
+  - RULE-SET,direct,🎯 全球直连
+
+  # 10. 局域网与国内 IP 段直连（带 no-resolve 避免提前触发 DNS 解析）
+  - RULE-SET,lancidr,🎯 全球直连,no-resolve
+  - RULE-SET,cncidr,🎯 全球直连,no-resolve
+
+  # 11. Telegram IP 走代理
+  - RULE-SET,telegramcidr,📲 电报消息,no-resolve
+
+  # 12. GeoIP 兜底识别
+  - GEOIP,LAN,🎯 全球直连,no-resolve
+  - GEOIP,CN,🎯 全球直连,no-resolve
+
+  # 13. 兜底匹配：未在规则中的流量交由【漏网之鱼】处理（默认走代理，避免漏掉境外生僻域名）
+  - MATCH,🐟 漏网之鱼
+
