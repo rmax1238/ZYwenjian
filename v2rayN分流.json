@@ -1,0 +1,420 @@
+[
+  {
+    "remarks": "绕过 bittorrent（BT 不走代理）",
+    "outboundTag": "direct",
+    "protocol": [
+      "bittorrent"
+    ]
+  },
+  {
+    "remarks": "局域网 / 私有 IP 直连",
+    "outboundTag": "direct",
+    "ip": [
+      "geoip:private"
+    ]
+  },
+  {
+    "remarks": "局域网 / 私有域名直连",
+    "outboundTag": "direct",
+    "domain": [
+      "geosite:private"
+    ]
+  },
+  {
+    "remarks": "国区域名（.cn）直连",
+    "outboundTag": "direct",
+    "domain": [
+      "domain:cn"
+    ]
+  },
+  {
+    "remarks": "广告拦截",
+    "outboundTag": "block",
+    "domain": [
+      "geosite:category-ads-all"
+    ]
+  },
+  {
+    "remarks": "国内 AI 服务直连（必须在 AI 代理规则之前）",
+    "outboundTag": "direct",
+    "domain": [
+      "domain:deepseek.com",
+      "domain:deepseek.cn",
+      "domain:moonshot.cn",
+      "domain:kimi.moonshot.cn",
+      "domain:bigmodel.cn",
+      "domain:zhipuai.cn",
+      "domain:chatglm.cn",
+      "domain:doubao.com",
+      "domain:volces.com",
+      "domain:volcengine.com",
+      "domain:tongyi.aliyun.com",
+      "domain:qianwen.com",
+      "domain:dashscope.aliyuncs.com",
+      "domain:bailian.console.aliyun.com",
+      "domain:minimaxi.com",
+      "domain:minimax.chat",
+      "domain:hailuoai.com",
+      "domain:yiyan.baidu.com",
+      "domain:wenxin.baidu.com",
+      "domain:aip.baidubce.com",
+      "domain:hunyuan.tencent.com",
+      "domain:baichuan-ai.com",
+      "domain:stepfun.com",
+      "domain:01.ai",
+      "domain:sensetime.com",
+      "domain:sensenova.cn",
+      "domain:xinghuo.xfyun.cn",
+      "domain:siliconflow.cn",
+      "domain:modelscope.cn",
+      "domain:coze.cn",
+      "domain:jimeng.jianying.com"
+    ]
+  },
+  {
+    "remarks": "游戏-国服直连：国服平台 + Steam 国内下载 CDN + 国行主机商店（48 条，对齐 Clash 的 game-cn）",
+    "outboundTag": "direct",
+    "domain": [
+      "domain:wegame.com",
+      "domain:wegame.com.cn",
+      "domain:wegameplus.com",
+      "domain:tencent-gcloud.com",
+      "domain:tencentstart.com",
+      "domain:roblox.qq.com",
+      "domain:roco.qq.com",
+      "domain:gouhuo.qq.com",
+      "domain:qq163.net",
+      "domain:webgame163.com",
+      "domain:bilibiligame.net",
+      "domain:bilibiligame.cn",
+      "domain:mihoyo.com",
+      "domain:mihoyomall.com",
+      "domain:mihoyogift.com",
+      "domain:mihoyocg.com",
+      "domain:wanmei.com",
+      "domain:wmsj.cn",
+      "domain:sdo.com",
+      "domain:yostar.cn",
+      "domain:leagueoflegends.cn",
+      "domain:lpl.com.cn",
+      "domain:bluearchive-cn.com",
+      "domain:gog.qtlglb.com",
+      "domain:steamcontent.com",
+      "domain:dl.steam.clngaa.com",
+      "domain:st.dl.bscstorage.net",
+      "domain:st.dl.eccdnx.com",
+      "domain:st.dl.pinyuncloud.com",
+      "domain:steampowered.com.8686c.com",
+      "domain:steamstatic.com.8686c.com",
+      "domain:alibaba.cdn.steampipe.steamcontent.com",
+      "domain:queniujq.cn",
+      "domain:pphimalayanrt.com",
+      "domain:client-update.queniuqe.com",
+      "domain:wmsjsteam.com",
+      "domain:steamchina.com",
+      "domain:xboxlive.cn",
+      "domain:nintendoswitch.cn",
+      "domain:nintendoswitch.com.cn",
+      "domain:nintendolabo.cn",
+      "domain:mariokart.cn",
+      "domain:mariokart.com.cn",
+      "domain:supermariobros.com.cn",
+      "domain:supersmashbros.cn",
+      "domain:supersmashbros.com.cn",
+      "domain:legendofzelda.cn",
+      "domain:legendofzelda.com.cn"
+    ]
+  },
+  {
+    "remarks": "游戏-国服平台总集直连（v2fly category-games-cn，先于海外总集，防抢）",
+    "outboundTag": "direct",
+    "domain": [
+      "geosite:category-games-cn"
+    ]
+  },
+  {
+    "remarks": "游戏-海外平台走代理：Steam/Epic/暴雪/Riot/Ubisoft/EA/GOG/任天堂/PS/Xbox 等（对齐 Clash 的 category-games）",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:category-games"
+    ]
+  },
+  {
+    "remarks": "游戏-补充：Rockstar 与 Discord（v2fly category-games 未收录，对齐 Clash 的 GEOSITE,discord）",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:rockstar",
+      "geosite:discord"
+    ]
+  },
+  {
+    "remarks": "国区 Apple / 微软 / Windows Update 直连",
+    "outboundTag": "direct",
+    "domain": [
+      "domain:apple.com.cn",
+      "domain:icloud.com.cn",
+      "domain:apple.cn",
+      "domain:apple-appstore.cn",
+      "domain:appstoreapple.cn",
+      "domain:appleappstore.cn",
+      "domain:windowsupdate.com",
+      "domain:download.windowsupdate.com",
+      "domain:delivery.mp.microsoft.com",
+      "domain:update.microsoft.com",
+      "domain:windowsupdate.microsoft.com",
+      "domain:microsoft-smb.cn",
+      "domain:microsoftonline-i.cn",
+      "domain:engkoo.com",
+      "domain:lync.cn"
+    ]
+  },
+  {
+    "remarks": "AI - OpenAI / ChatGPT（含验证码、功能开关、语音、文件上传链路）",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:openai",
+      "full:openai-api.arkoselabs.com",
+      "full:client-api.arkoselabs.com",
+      "full:api.statsig.com",
+      "domain:statsigapi.net",
+      "domain:featuregates.org",
+      "domain:observeit.net",
+      "full:openaicom-api-bdcpf8c6d2e9atf6.z01.azurefd.net",
+      "domain:openaiapi-site.azureedge.net",
+      "domain:openaicom.imgix.net",
+      "domain:chatgpt.livekit.cloud",
+      "domain:host.livekit.cloud",
+      "domain:turn.livekit.cloud"
+    ]
+  },
+  {
+    "remarks": "AI - Anthropic / Claude",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:anthropic"
+    ]
+  },
+  {
+    "remarks": "AI - Google Gemini / DeepMind",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:google-gemini",
+      "geosite:google-deepmind"
+    ]
+  },
+  {
+    "remarks": "AI - Microsoft Copilot",
+    "outboundTag": "proxy",
+    "domain": [
+      "domain:copilot.microsoft.com",
+      "domain:copilot.cloud.microsoft",
+      "full:sydney.bing.com",
+      "domain:edgeservices.bing.com",
+      "full:r.bing.com",
+      "full:services.bingapis.com",
+      "full:www.bing.com",
+      "full:api.msn.com",
+      "full:assets.msn.com",
+      "domain:gateway.bingviz.microsoft.net",
+      "domain:gateway.bingviz.microsoftapp.net",
+      "domain:api.microsoftapp.net",
+      "domain:bing-shopping.microsoft-falcon.io",
+      "domain:githubcopilot.com",
+      "domain:copilot-proxy.githubusercontent.com",
+      "domain:copilot-stg.com"
+    ]
+  },
+  {
+    "remarks": "AI - 其他服务补充（geosite 缺口）",
+    "outboundTag": "proxy",
+    "domain": [
+      "domain:stability.ai",
+      "domain:replicate.com",
+      "domain:replicate.delivery",
+      "domain:leonardo.ai",
+      "domain:ideogram.ai",
+      "domain:krea.ai",
+      "domain:tensor.art",
+      "domain:fal.ai",
+      "domain:fal.run",
+      "domain:photoroom.com",
+      "domain:runwayml.com",
+      "domain:lumalabs.ai",
+      "domain:pika.art",
+      "domain:viggle.ai",
+      "domain:hedra.com",
+      "domain:klingai.com",
+      "domain:hailuoai.video",
+      "domain:suno.com",
+      "domain:suno.ai",
+      "domain:udio.com",
+      "domain:riffusion.com",
+      "domain:play.ht",
+      "domain:murf.ai",
+      "domain:speechify.com",
+      "domain:deepgram.com",
+      "domain:assemblyai.com",
+      "domain:heygen.com",
+      "domain:synthesia.io",
+      "domain:d-id.com",
+      "domain:descript.com",
+      "domain:captions.ai",
+      "domain:otter.ai",
+      "domain:fireflies.ai",
+      "domain:tldv.io",
+      "domain:granola.ai",
+      "domain:together.ai",
+      "domain:together.xyz",
+      "domain:deepinfra.com",
+      "domain:anyscale.com",
+      "domain:lepton.ai",
+      "domain:fireworks.ai",
+      "domain:baseten.co",
+      "domain:modal.com",
+      "domain:weights.gg",
+      "domain:phind.com",
+      "domain:you.com",
+      "domain:tavily.com",
+      "domain:exa.ai",
+      "domain:lmarena.ai",
+      "domain:lmsys.org",
+      "domain:pinecone.io",
+      "domain:weaviate.io",
+      "domain:qdrant.tech",
+      "domain:zilliz.com",
+      "domain:llamaindex.ai",
+      "domain:langfuse.com",
+      "domain:e2b.dev",
+      "domain:gamma.app",
+      "domain:tome.app",
+      "domain:invideo.io",
+      "domain:pictory.ai",
+      "domain:fliki.ai"
+    ]
+  },
+  {
+    "remarks": "AI - 总兜底（Perplexity / xAI-Grok / Cursor / Poe / Groq / HuggingFace 等）",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:category-ai-!cn"
+    ]
+  },
+  {
+    "remarks": "AI - Anthropic 自有 IP 段兜底",
+    "outboundTag": "proxy",
+    "ip": [
+      "160.79.104.0/21"
+    ]
+  },
+  {
+    "remarks": "YouTube",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:youtube"
+    ]
+  },
+  {
+    "remarks": "流媒体（Disney+ / Netflix / Spotify / TikTok）",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:disney",
+      "geosite:netflix",
+      "geosite:spotify",
+      "geosite:tiktok"
+    ]
+  },
+  {
+    "remarks": "Telegram",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:telegram"
+    ],
+    "ip": [
+      "geoip:telegram"
+    ]
+  },
+  {
+    "remarks": "Google 服务",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:google"
+    ]
+  },
+  {
+    "remarks": "微软服务",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:microsoft"
+    ]
+  },
+  {
+    "remarks": "Apple 服务",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:apple"
+    ]
+  },
+  {
+    "remarks": "币圈",
+    "outboundTag": "proxy",
+    "domain": [
+      "geosite:category-cryptocurrency"
+    ]
+  },
+  {
+    "remarks": "海外公共 DNS 走代理（防污染）",
+    "outboundTag": "proxy",
+    "domain": [
+      "domain:cloudflare-dns.com",
+      "domain:one.one.one.one",
+      "domain:dns.google",
+      "domain:quad9.net",
+      "domain:adguard-dns.com"
+    ],
+    "ip": [
+      "1.1.1.1",
+      "1.0.0.1",
+      "8.8.8.8",
+      "8.8.4.4",
+      "9.9.9.9",
+      "149.112.112.112"
+    ]
+  },
+  {
+    "remarks": "中国公共 DNS 直连",
+    "outboundTag": "direct",
+    "domain": [
+      "domain:alidns.com",
+      "domain:doh.pub",
+      "domain:dot.pub",
+      "domain:360.cn",
+      "domain:onedns.net"
+    ],
+    "ip": [
+      "223.5.5.5",
+      "223.6.6.6",
+      "119.29.29.29",
+      "114.114.114.114",
+      "180.76.76.76"
+    ]
+  },
+  {
+    "remarks": "中国 IP 直连",
+    "outboundTag": "direct",
+    "ip": [
+      "geoip:cn"
+    ]
+  },
+  {
+    "remarks": "中国域名直连",
+    "outboundTag": "direct",
+    "domain": [
+      "geosite:cn"
+    ]
+  },
+  {
+    "remarks": "最终代理（兜底）",
+    "outboundTag": "proxy",
+    "port": "0-65535"
+  }
+]

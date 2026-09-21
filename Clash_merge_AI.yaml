@@ -1,0 +1,1159 @@
+# ============================================================
+# Clash 完美分流 · AI 强化版
+#
+# 基线：n0de-sudo/Perfect-Rules · Clash 完美分流 3.0
+# 内核：仅 mihomo（Clash Verge Rev / Clash Meta / Mihomo Party）
+#
+# 规则源清单与甄别结论见文件末尾。
+#
+# 【分组结构 v4】
+#   唯一总控 = 「🎯 节点选择」。所有分流组候选列表第一项都指向它，
+#   在那里选一次，全部规则组跟着走。
+#   「🚀 兜底代理」是纯 MATCH 兜底，内容只有 [节点选择, DIRECT]，
+#   不承担总控职责（否则与节点选择功能重复）。
+#   组名后缀 [系统] / [自选] 已全部去除。
+#   地区组名统一规范为「中国香港 / 中国台湾」。
+#   组顺序：节点选择 → 节点手动选择 → 节点自动选择 → 节点负载均衡
+#           → AI 组 ×5 → 分流组 ×8 → 地区组 ×7 → 广告拦截 → 兜底代理
+#
+# 【v4 相对 v3 的改动】（参照 mitce 机场配置做的核验与吸收）
+#   1. 新增「⚖️ 节点负载均衡」组，并同步加进所有候选列表，
+#      维持「候选列表完全一致」这条不变量。用 consistent-hashing：
+#      同一目标域名固定走同一节点，适合大文件/多线程下载。
+#   2. dns 增加 direct-nameserver + respect-rules：
+#      直连出口的域名用国内 DNS 解析，不再靠 nameserver-policy 手工枚举。
+#   3. profile.store-selected / store-fake-ip：重启后记住分组选择。
+#   4. rule-providers 显式声明 proxy: DIRECT：规则集直连下载，
+#      不吃订阅流量，也不会因为 respect-rules 被绕进代理。
+#   5. ntp + geo-auto-update：保证测速时钟准确、GEOSITE 数据不陈旧。
+#   6. url-test 组统一加 expected-status: 204，挡掉被劫持返回 200 的假活节点。
+#   7. tun.endpoint-independent-nat：改善游戏 P2P / UDP 打洞的 NAT 类型。
+#
+# 使用：Clash Verge → 订阅 → 全局扩展覆写配置 → 粘贴保存
+# ============================================================
+
+
+# ---------------- 基础网络 ----------------
+
+mode: rule
+log-level: warning
+ipv6: false
+
+find-process-mode: strict            # 游戏平台分流依赖进程识别
+unified-delay: true
+tcp-concurrent: true
+
+
+# ---------------- 状态持久化 ----------------
+# store-selected：把「在哪个组选了哪个节点」写进 cache.db。
+#   不开的话，每次切订阅 / 重启内核，26 个分组的选择全部回到第一项，
+#   需要重新点一遍。
+# store-fake-ip：把 fake-ip 映射表也持久化。
+#   不开的话重启后域名会拿到新的 fake-ip，某些长连接应用会连不上。
+
+profile:
+  store-selected: true
+  store-fake-ip: true
+
+
+# ---------------- 时间同步 ----------------
+# 【为什么要开】url-test 的延迟数值、TLS 证书校验都依赖系统时钟。
+# 系统时间偏差过大时会出现「节点全部超时」或握手失败。
+# write-to-system 保持 false：同步到系统时间需要管理员权限，
+# 交给系统自己的时间服务更省事。
+
+ntp:
+  enable: true
+  write-to-system: false
+  server: ntp.aliyun.com
+  port: 123
+  interval: 30
+
+
+# ---------------- GEO 数据自动更新 ----------------
+# 本配置大量依赖 GEOSITE（category-games / openai / anthropic /
+# google-gemini / netflix / spotify / tiktok …）。
+# 数据陈旧会导致新域名漏匹配，这里让内核自己按天更新。
+# 若你的客户端已经自带 geo 更新（Clash Verge 有此选项），
+# 删掉下面两行即可，避免重复下载。
+
+geo-auto-update: true
+geo-update-interval: 24
+
+
+# ---------------- TUN ----------------
+# stack: mixed = TCP 走系统栈、UDP 走 gvisor 栈。这是官方建议值：
+#   TCP 用系统栈性能最好，UDP 用 gvisor 兼容性最好。
+
+tun:
+  enable: true
+  stack: mixed
+  auto-route: true
+  auto-detect-interface: true
+  strict-route: true
+  dns-hijack:
+    - any:53
+    - tcp://any:53
+  # endpoint-independent-nat：让 TUN 的 UDP NAT 变成「端点无关」。
+  #   效果是游戏 / P2P 的 UDP 打洞更容易成功（NAT 类型更好）。
+  #   代价：官方说明「性能可能会略有下降」，不玩游戏可以关掉。
+  endpoint-independent-nat: true
+
+
+# ---------------- 域名嗅探 ----------------
+# 【AI 分流关键项】
+# 桌面端 ChatGPT / Claude / Gemini 客户端以及各类 AI CLI（Claude Code、
+# Codex CLI、Cursor）常自带 DoH 或直接用 IP 连接，此时 mihomo 只能看到
+# IP，域名规则全部失效，AI 流量会掉到 MATCH 走兜底代理。
+# 开启嗅探后可按 TLS SNI / HTTP Host 还原域名，域名规则才能命中。
+# parse-pure-ip: true 是让「纯 IP 连接」也参与嗅探的关键开关。
+
+sniffer:
+  enable: true
+  override-destination: false
+  force-dns-mapping: true
+  parse-pure-ip: true
+  sniff:
+    HTTP:
+      ports: [80, 8080-8880]
+    TLS:
+      ports: [443, 8443]
+    QUIC:
+      ports: [443, 8443]
+  skip-domain:
+    - "Mijia Cloud"
+    - "+.push.apple.com"
+    - "+.wechat.com"
+    - "+.qq.com"
+
+
+# ---------------- DNS ----------------
+
+dns:
+  enable: true
+  listen: 127.0.0.1:1053
+  ipv6: false
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+
+  # prefer-h3 保持 false：官方明确「强烈不建议和 respect-rules 一起使用」，
+  # 这里显式写出来当护栏，免得别处被改成 true。
+  prefer-h3: false
+
+  # respect-rules：让 DNS 上游连接也遵守路由规则。
+  #   配合下面的 proxy-server-nameserver 使用（缺了它会出现
+  #   「要解析 DoH 域名，但解析器本身要走代理」的鸡蛋问题）。
+  respect-rules: true
+
+  fake-ip-filter-mode: blacklist
+  fake-ip-filter:
+    - '*.lan'
+    - '*.local'
+    - '*.arpa'
+    - '*.home.arpa'
+    - 'localhost.ptlogin2.qq.com'
+    - '+.msftconnecttest.com'
+    - '+.msftncsi.com'
+    - 'time.*.com'
+    - 'ntp.*.com'
+    - 'ntp.aliyun.com'
+    - '+.pool.ntp.org'
+    - '+.stun.*.*'
+    - 'xbox.*.microsoft.com'
+    - '*.xboxlive.com'
+    - '+.srv.nintendo.net'
+    - '*.stun.playstation.net'
+    - '*.battlenet.com.cn'
+    - '+.market.xiaomi.com'
+    - '+.work.weixin.qq.com'
+    # 上面这些必须拿到真实 IP：NTP / STUN / 主机联机 / Windows 连通性检测
+    # 都不走域名规则，拿到 fake-ip 就会直接连不上。
+
+  nameserver:
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+
+  default-nameserver:
+    - 223.5.5.5
+    - 223.6.6.6
+    # 必须填 IP（不能填 DoH 域名），否则解析器自己的域名没人解析。
+
+  proxy-server-nameserver:
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+    # 只用于解析节点服务器域名。走国内 DoH 是因为节点域名基本都在
+    # 国内可解析范围，且此时代理还没建立，不能依赖代理。
+
+  # direct-nameserver：给「直连出口」的域名单独指定解析器。
+  # 【为什么需要】以前靠 nameserver-policy 手工枚举哪些域名走国内 DNS，
+  # 漏一个就会用默认解析器解析直连域名，拿到被污染的 IP，然后
+  # GEOIP,CN 判成境外，直连流量被错误地推进代理。
+  # 有了它，解析器自动跟着「这条域名最终走 DIRECT」的判定走，无需枚举。
+  direct-nameserver:
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+    - 119.29.29.29
+  direct-nameserver-follow-policy: true
+  # follow-policy: true 表示 direct-nameserver 仍然尊重 nameserver-policy
+  # （policy 命中时以 policy 为准），两者取并集，不冲突。
+
+  nameserver-policy:
+    'geosite:cn,private':
+      - https://doh.pub/dns-query
+      - https://dns.alidns.com/dns-query
+
+
+# ---------------- 规则集 ----------------
+
+rule-providers:
+
+  # ---- 远程 provider 共 7 个（Perfect-Rules，每日自动更新）----
+  #
+  # 全部显式声明 proxy: DIRECT，理由有两个：
+  #   1) 规则集下载不吃订阅流量（一天一次，但 Steam/游戏类规则集不小）；
+  #   2) 上面开了 dns.respect-rules，若不声明，内核内部的 HTTP 请求
+  #      也会按路由规则走 —— 这些域名没有专门规则，会掉进
+  #      MATCH → 🚀 兜底代理，形成「没规则就没法下载规则」的依赖。
+  # 如果你的网络直连 jsdelivr 不通，把 proxy: DIRECT 改成
+  # proxy: "🎯 节点选择" 即可。
+
+  ads:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    proxy: DIRECT
+    url: "https://cdn.jsdelivr.net/gh/n0de-sudo/Perfect-Rules@main/Clash/rules/ads.yaml"
+
+  ai:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    proxy: DIRECT
+    url: "https://cdn.jsdelivr.net/gh/n0de-sudo/Perfect-Rules@main/Clash/rules/ai.yaml"
+    # 内容 = GEOSITE,category-ai-!cn（meta-rules-dat，约 180 条，AI 总兜底）
+
+  youtube:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    proxy: DIRECT
+    url: "https://cdn.jsdelivr.net/gh/n0de-sudo/Perfect-Rules@main/Clash/rules/youtube.yaml"
+
+  crypto:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    proxy: DIRECT
+    url: "https://cdn.jsdelivr.net/gh/n0de-sudo/Perfect-Rules@main/Clash/rules/crypto.yaml"
+
+  disney:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    proxy: DIRECT
+    url: "https://cdn.jsdelivr.net/gh/n0de-sudo/Perfect-Rules@main/Clash/rules/disney.yaml"
+
+  apple:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    proxy: DIRECT
+    url: "https://cdn.jsdelivr.net/gh/n0de-sudo/Perfect-Rules@main/Clash/rules/apple.yaml"
+
+  google:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    proxy: DIRECT
+    url: "https://cdn.jsdelivr.net/gh/n0de-sudo/Perfect-Rules@main/Clash/rules/google.yaml"
+
+  # ---- 游戏平台专项（inline，随配置走，无外部依赖）----
+
+  # 国服游戏平台 + Steam 国内下载 CDN。
+  # 这些必须排在游戏代理规则之前直连，原因有两个：
+  #   1) 国服平台走代理会被判定异地登录，延迟也暴涨；
+  #   2) Steam 国内 CDN 直连通常比机场节点快得多，而且不吃订阅流量。
+  game-cn:
+    type: inline
+    behavior: classical
+    payload:
+      # 国服游戏平台
+      - "DOMAIN-SUFFIX,wegame.com"
+      - "DOMAIN-SUFFIX,wegame.com.cn"
+      - "DOMAIN-SUFFIX,wegameplus.com"
+      - "DOMAIN-SUFFIX,tencent-gcloud.com"
+      - "DOMAIN-SUFFIX,tencentstart.com"
+      - "DOMAIN-SUFFIX,roblox.qq.com"
+      - "DOMAIN-SUFFIX,roco.qq.com"
+      - "DOMAIN-SUFFIX,gouhuo.qq.com"
+      - "DOMAIN-SUFFIX,qq163.net"
+      - "DOMAIN-SUFFIX,webgame163.com"
+      - "DOMAIN-SUFFIX,bilibiligame.net"
+      - "DOMAIN-SUFFIX,bilibiligame.cn"
+      - "DOMAIN-SUFFIX,mihoyo.com"
+      - "DOMAIN-SUFFIX,mihoyomall.com"
+      - "DOMAIN-SUFFIX,mihoyogift.com"
+      - "DOMAIN-SUFFIX,mihoyocg.com"
+      - "DOMAIN-SUFFIX,wanmei.com"
+      - "DOMAIN-SUFFIX,wmsj.cn"
+      - "DOMAIN-SUFFIX,sdo.com"
+      - "DOMAIN-SUFFIX,yostar.cn"
+      - "DOMAIN-SUFFIX,leagueoflegends.cn"
+      - "DOMAIN-SUFFIX,lpl.com.cn"
+      - "DOMAIN-SUFFIX,bluearchive-cn.com"
+      - "DOMAIN-SUFFIX,gog.qtlglb.com"
+      # Steam 国内下载 CDN
+      # 只想要「商店代理、下载直连」就保留这段；
+      # 想连下载也走代理，把 steamcontent.com 及下面各 CDN 行删掉即可。
+      - "DOMAIN-SUFFIX,steamcontent.com"
+      - "DOMAIN-SUFFIX,dl.steam.clngaa.com"
+      - "DOMAIN-SUFFIX,st.dl.bscstorage.net"
+      - "DOMAIN-SUFFIX,st.dl.eccdnx.com"
+      - "DOMAIN-SUFFIX,st.dl.pinyuncloud.com"
+      - "DOMAIN-SUFFIX,steampowered.com.8686c.com"
+      - "DOMAIN-SUFFIX,steamstatic.com.8686c.com"
+      - "DOMAIN-SUFFIX,alibaba.cdn.steampipe.steamcontent.com"
+      - "DOMAIN-SUFFIX,queniujq.cn"
+      - "DOMAIN-SUFFIX,pphimalayanrt.com"
+      - "DOMAIN-SUFFIX,client-update.queniuqe.com"
+      - "DOMAIN-SUFFIX,wmsjsteam.com"
+      - "DOMAIN-SUFFIX,steamchina.com"
+      # 国行主机商店
+      - "DOMAIN-SUFFIX,xboxlive.cn"
+      - "DOMAIN-SUFFIX,nintendoswitch.cn"
+      - "DOMAIN-SUFFIX,nintendoswitch.com.cn"
+      - "DOMAIN-SUFFIX,nintendolabo.cn"
+      - "DOMAIN-SUFFIX,mariokart.cn"
+      - "DOMAIN-SUFFIX,mariokart.com.cn"
+      - "DOMAIN-SUFFIX,supermariobros.com.cn"
+      - "DOMAIN-SUFFIX,supersmashbros.cn"
+      - "DOMAIN-SUFFIX,supersmashbros.com.cn"
+      - "DOMAIN-SUFFIX,legendofzelda.cn"
+      - "DOMAIN-SUFFIX,legendofzelda.com.cn"
+
+  # 游戏客户端进程识别。
+  # 【为什么必须有】Steam / 战网 / Riot 的游戏本体连接大量走裸 IP 或
+  # 自建服务器（P2P、UDP、非标准端口），域名规则根本抓不到，只有按进程
+  # 匹配才能把这些流量拉进游戏组。依赖 find-process-mode: strict。
+  # 【顺序约束】进程规则一命中就终止匹配，所以上面 game-cn 里的国内下载
+  # CDN 域名规则必须排在进程规则之前，否则 Steam 下载会被一并拖去代理。
+  # 【没有收录国服游戏进程】WeGame / 米哈游国服等由 game-cn 的域名规则
+  # 负责直连，若在这里加进程规则反而会把它们推去代理。
+  games:
+    type: inline
+    behavior: classical
+    payload:
+      - "PROCESS-NAME-WILDCARD,*Steam*"
+      - "PROCESS-NAME-WILDCARD,*EpicGames*"
+      - "PROCESS-NAME-WILDCARD,*EpicWebHelper*"
+      - "PROCESS-NAME-WILDCARD,*Battle.net*"
+      - "PROCESS-NAME-WILDCARD,*RiotClient*"
+      - "PROCESS-NAME-WILDCARD,*LeagueClient*"
+      - "PROCESS-NAME-WILDCARD,*VALORANT*"
+      - "PROCESS-NAME-WILDCARD,*Ubisoft*"
+      - "PROCESS-NAME-WILDCARD,*upc.exe*"
+      - "PROCESS-NAME-WILDCARD,*EADesktop*"
+      - "PROCESS-NAME-WILDCARD,*EABackgroundService*"
+      - "PROCESS-NAME-WILDCARD,*Origin.exe*"
+      - "PROCESS-NAME-WILDCARD,*GalaxyClient*"
+      - "PROCESS-NAME-WILDCARD,*Rockstar*"
+      - "PROCESS-NAME-WILDCARD,*SocialClub*"
+      - "PROCESS-NAME-WILDCARD,*Discord*"
+
+
+  # ---- AI 专项补充（inline，随配置走，无外部依赖）----
+
+  # ChatGPT / OpenAI 辅助链路。
+  # geosite:openai 只收录主域名，验证码、功能开关、语音、文件上传
+  # 这些链路缺了会导致「能打开但登录失败 / 无语音 / 传不了文件」。
+  ai-openai:
+    type: inline
+    behavior: classical
+    payload:
+      - "DOMAIN,openai-api.arkoselabs.com"
+      - "DOMAIN,client-api.arkoselabs.com"
+      - "DOMAIN,api.statsig.com"
+      - "DOMAIN-SUFFIX,statsigapi.net"
+      - "DOMAIN-SUFFIX,featuregates.org"
+      - "DOMAIN-SUFFIX,observeit.net"
+      - "DOMAIN,openaicom-api-bdcpf8c6d2e9atf6.z01.azurefd.net"
+      - "DOMAIN-SUFFIX,openaiapi-site.azureedge.net"
+      - "DOMAIN-SUFFIX,openaicom.imgix.net"
+      - "DOMAIN-SUFFIX,chatgpt.livekit.cloud"
+      - "DOMAIN-SUFFIX,host.livekit.cloud"
+      - "DOMAIN-SUFFIX,turn.livekit.cloud"
+
+  # Microsoft Copilot 专用链路。
+  # 注意：www.bing.com 也在此列 —— Copilot 与 Bing 搜索共用后端，
+  # 想让 Bing 搜索走兜底代理的话，删掉 www.bing.com 这一行即可。
+  ai-copilot:
+    type: inline
+    behavior: classical
+    payload:
+      - "DOMAIN-SUFFIX,copilot.microsoft.com"
+      - "DOMAIN-SUFFIX,copilot.cloud.microsoft"
+      - "DOMAIN,sydney.bing.com"
+      - "DOMAIN-SUFFIX,edgeservices.bing.com"
+      - "DOMAIN,r.bing.com"
+      - "DOMAIN,services.bingapis.com"
+      - "DOMAIN,www.bing.com"
+      - "DOMAIN,api.msn.com"
+      - "DOMAIN,assets.msn.com"
+      - "DOMAIN-SUFFIX,gateway.bingviz.microsoft.net"
+      - "DOMAIN-SUFFIX,gateway.bingviz.microsoftapp.net"
+      - "DOMAIN-SUFFIX,api.microsoftapp.net"
+      - "DOMAIN-SUFFIX,bing-shopping.microsoft-falcon.io"
+      - "DOMAIN-SUFFIX,githubcopilot.com"
+      - "DOMAIN-SUFFIX,copilot-proxy.githubusercontent.com"
+      - "DOMAIN-SUFFIX,copilot-stg.com"
+
+  # geosite:category-ai-!cn 未收录的 AI 服务（已逐条比对去重）。
+  ai-extra:
+    type: inline
+    behavior: classical
+    payload:
+      # 图像生成
+      - "DOMAIN-SUFFIX,stability.ai"
+      - "DOMAIN-SUFFIX,replicate.com"
+      - "DOMAIN-SUFFIX,replicate.delivery"
+      - "DOMAIN-SUFFIX,leonardo.ai"
+      - "DOMAIN-SUFFIX,ideogram.ai"
+      - "DOMAIN-SUFFIX,krea.ai"
+      - "DOMAIN-SUFFIX,tensor.art"
+      - "DOMAIN-SUFFIX,fal.ai"
+      - "DOMAIN-SUFFIX,fal.run"
+      - "DOMAIN-SUFFIX,photoroom.com"
+      # 视频生成
+      - "DOMAIN-SUFFIX,runwayml.com"
+      - "DOMAIN-SUFFIX,lumalabs.ai"
+      - "DOMAIN-SUFFIX,pika.art"
+      - "DOMAIN-SUFFIX,viggle.ai"
+      - "DOMAIN-SUFFIX,hedra.com"
+      - "DOMAIN-SUFFIX,klingai.com"
+      - "DOMAIN-SUFFIX,hailuoai.video"
+      # 音乐 / 语音
+      - "DOMAIN-SUFFIX,suno.com"
+      - "DOMAIN-SUFFIX,suno.ai"
+      - "DOMAIN-SUFFIX,udio.com"
+      - "DOMAIN-SUFFIX,riffusion.com"
+      - "DOMAIN-SUFFIX,play.ht"
+      - "DOMAIN-SUFFIX,murf.ai"
+      - "DOMAIN-SUFFIX,speechify.com"
+      - "DOMAIN-SUFFIX,deepgram.com"
+      - "DOMAIN-SUFFIX,assemblyai.com"
+      # 数字人 / 会议纪要
+      - "DOMAIN-SUFFIX,heygen.com"
+      - "DOMAIN-SUFFIX,synthesia.io"
+      - "DOMAIN-SUFFIX,d-id.com"
+      - "DOMAIN-SUFFIX,descript.com"
+      - "DOMAIN-SUFFIX,captions.ai"
+      - "DOMAIN-SUFFIX,otter.ai"
+      - "DOMAIN-SUFFIX,fireflies.ai"
+      - "DOMAIN-SUFFIX,tldv.io"
+      - "DOMAIN-SUFFIX,granola.ai"
+      # 模型托管 / 推理平台
+      - "DOMAIN-SUFFIX,together.ai"
+      - "DOMAIN-SUFFIX,together.xyz"
+      - "DOMAIN-SUFFIX,deepinfra.com"
+      - "DOMAIN-SUFFIX,anyscale.com"
+      - "DOMAIN-SUFFIX,lepton.ai"
+      - "DOMAIN-SUFFIX,fireworks.ai"
+      - "DOMAIN-SUFFIX,baseten.co"
+      - "DOMAIN-SUFFIX,modal.com"
+      - "DOMAIN-SUFFIX,weights.gg"
+      # 搜索 / 检索 / 向量库
+      - "DOMAIN-SUFFIX,phind.com"
+      - "DOMAIN-SUFFIX,you.com"
+      - "DOMAIN-SUFFIX,tavily.com"
+      - "DOMAIN-SUFFIX,exa.ai"
+      - "DOMAIN-SUFFIX,lmarena.ai"
+      - "DOMAIN-SUFFIX,lmsys.org"
+      - "DOMAIN-SUFFIX,pinecone.io"
+      - "DOMAIN-SUFFIX,weaviate.io"
+      - "DOMAIN-SUFFIX,qdrant.tech"
+      - "DOMAIN-SUFFIX,zilliz.com"
+      - "DOMAIN-SUFFIX,llamaindex.ai"
+      - "DOMAIN-SUFFIX,langfuse.com"
+      - "DOMAIN-SUFFIX,e2b.dev"
+      # 办公 / 设计类 AI
+      - "DOMAIN-SUFFIX,gamma.app"
+      - "DOMAIN-SUFFIX,tome.app"
+      - "DOMAIN-SUFFIX,invideo.io"
+      - "DOMAIN-SUFFIX,pictory.ai"
+      - "DOMAIN-SUFFIX,fliki.ai"
+
+  # 国内 AI 服务：必须放在 AI 规则之前直连。
+  # 这些域名走 Cloudflare / 海外 CDN 时 GEOIP 可能判成境外，
+  # 显式直连可以避免「国内 AI 被拖去绕一圈」。
+  ai-cn:
+    type: inline
+    behavior: classical
+    payload:
+      - "DOMAIN-SUFFIX,deepseek.com"
+      - "DOMAIN-SUFFIX,deepseek.cn"
+      - "DOMAIN-SUFFIX,moonshot.cn"
+      - "DOMAIN-SUFFIX,kimi.moonshot.cn"
+      - "DOMAIN-SUFFIX,bigmodel.cn"
+      - "DOMAIN-SUFFIX,zhipuai.cn"
+      - "DOMAIN-SUFFIX,chatglm.cn"
+      - "DOMAIN-SUFFIX,doubao.com"
+      - "DOMAIN-SUFFIX,volces.com"
+      - "DOMAIN-SUFFIX,volcengine.com"
+      - "DOMAIN-SUFFIX,tongyi.aliyun.com"
+      - "DOMAIN-SUFFIX,qianwen.com"
+      - "DOMAIN-SUFFIX,dashscope.aliyuncs.com"
+      - "DOMAIN-SUFFIX,bailian.console.aliyun.com"
+      - "DOMAIN-SUFFIX,minimaxi.com"
+      - "DOMAIN-SUFFIX,minimax.chat"
+      - "DOMAIN-SUFFIX,hailuoai.com"
+      - "DOMAIN-SUFFIX,yiyan.baidu.com"
+      - "DOMAIN-SUFFIX,wenxin.baidu.com"
+      - "DOMAIN-SUFFIX,aip.baidubce.com"
+      - "DOMAIN-SUFFIX,hunyuan.tencent.com"
+      - "DOMAIN-SUFFIX,baichuan-ai.com"
+      - "DOMAIN-SUFFIX,stepfun.com"
+      - "DOMAIN-SUFFIX,01.ai"
+      - "DOMAIN-SUFFIX,sensetime.com"
+      - "DOMAIN-SUFFIX,sensenova.cn"
+      - "DOMAIN-SUFFIX,xinghuo.xfyun.cn"
+      - "DOMAIN-SUFFIX,siliconflow.cn"
+      - "DOMAIN-SUFFIX,modelscope.cn"
+      - "DOMAIN-SUFFIX,coze.cn"
+      - "DOMAIN-SUFFIX,jimeng.jianying.com"
+
+
+# ---------------- 策略组 ----------------
+
+proxy-groups:
+
+  # ==========================================================
+  # 分组顺序
+  #    1  🎯 节点选择        唯一总控。所有分流组第一项都指向它，
+  #                          在这里选一次，全局跟着走。
+  #    2  📋 节点手动选择    全部节点平铺，手动挑一个。
+  #    3  ♻️ 节点自动选择    全部节点自动测速，取最快。
+  #    4  ⚖️ 节点负载均衡    全部节点按目标域名分流，抗单点限速。
+  #    5~9   AI 组 ×5         AI服务 / ChatGPT / Claude / Gemini / Copilot
+  #   10~17  分流组 ×8        油管 / 流媒体 / 电报 / 微软 / 苹果 / 谷歌 / 币圈 / 游戏
+  #   18~24  地区组 ×7        中国香港 / 日本 / 新加坡 / 美国 / 中国台湾 / 韩国 / 其他地区
+  #   25     🛑 广告拦截
+  #   26     🚀 兜底代理        纯 MATCH 兜底，内容仅 [节点选择, DIRECT]。
+  #
+  # 【统一候选列表】
+  # 所有分流组的候选列表完全一致（AI 组除外，见下）：
+  #     节点选择 → 节点手动选择 → 节点自动选择 → 节点负载均衡
+  #     → 中国香港/日本/新加坡/美国/中国台湾/韩国 → 其他地区 → DIRECT
+  # 共 11 项。想增删任何一项，必须 22 个组一起改，否则破坏一致性。
+  #
+  # 【AI 组唯一例外】
+  # 🤖 AI服务 / 🧠 ChatGPT / 🎭 Claude / ✨ Gemini / 🧩 Copilot 五个组
+  # 不含中国香港节点 —— OpenAI、Anthropic、Google 均未把中国香港列入
+  # 支持地区，选中国香港会直接得到 not available in your region。
+  # 除中国香港一项外，与统一列表完全相同（10 项）。
+  # ==========================================================
+
+  # ==========================================================
+  # 节点四件套
+  #
+  #   🎯 节点选择      总入口。在这里选一次，所有分流组跟着走。
+  #   📋 节点手动选择  全部节点平铺，手动挑一个。
+  #   ♻️ 节点自动选择  全部节点自动测速，取最快。
+  #   ⚖️ 节点负载均衡  全部节点按目标域名分摊，抗单点限速。
+  #
+  # 四者职责不重叠：总入口只转发，手动选择只列节点，
+  # 自动选择只测速，负载均衡只做分摊。
+  #
+  # 自动选择 vs 负载均衡 怎么选：
+  #   自动选择 = 所有连接都挤在最快那一个节点上，延迟最低，
+  #              但单节点带宽会被自己吃满，下载大文件时明显。
+  #   负载均衡 = 不同目标域名分到不同节点，总带宽是叠加的，
+  #              适合 Steam 下载 / 多线程下载 / 多人同时用。
+  #              代价是每个站点固定走某一个节点，可能不如「最快那个」快。
+  #
+  # 注意：节点选择不引用「兜底代理」，否则 兜底代理 → 节点选择
+  #       → 兜底代理 会成环，mihomo 的 DAG 检查会拒绝加载。
+  # ==========================================================
+  - name: "🎯 节点选择"
+    type: select
+    proxies:
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇭🇰 中国香港节点"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+
+  - name: "📋 节点手动选择"
+    type: select
+    include-all-proxies: true
+    exclude-type: "Direct"
+    exclude-filter: "(?i)官网|流量|剩余|到期|过期|套餐|订阅|重置|邀请|客服|返利|购买|续费|试用|测速|群组|机场|traffic|expire|expired|subscription|reset|official|website"
+
+  - name: "♻️ 节点自动选择"
+    type: url-test
+    include-all-proxies: true
+    exclude-type: "Direct"
+    exclude-filter: "(?i)官网|流量|剩余|到期|过期|套餐|订阅|重置|邀请|客服|返利|购买|续费|试用|测速|群组|机场|traffic|expire|expired|subscription|reset|official|website"
+    url: "https://cp.cloudflare.com/generate_204"
+    interval: 300
+    expected-status: 204
+    tolerance: 50
+    lazy: true
+
+  - name: "⚖️ 节点负载均衡"
+    type: load-balance
+    strategy: consistent-hashing
+    include-all-proxies: true
+    exclude-type: "Direct"
+    exclude-filter: "(?i)官网|流量|剩余|到期|过期|套餐|订阅|重置|邀请|客服|返利|购买|续费|试用|测速|群组|机场|traffic|expire|expired|subscription|reset|official|website"
+    url: "https://cp.cloudflare.com/generate_204"
+    interval: 300
+    expected-status: 204
+    lazy: true
+    # strategy: consistent-hashing = 同一个「目标地址」固定分到同一个节点。
+    #
+    # 为什么不用 round-robin（轮询）：轮询会让同一个网站的不同请求走不同
+    # 出口 IP，登录态、风控、支付类站点会直接判定异常，属于能用但会出事。
+    #
+    # 为什么不用 sticky-sessions：那是按「来源 + 目标」缓存 10 分钟，
+    # 对「本机单一出口」这个场景收益不大，一致性哈希已经覆盖。
+    #
+    # 目标地址是域名时按顶级域名匹配，所以 a.example.com 和
+    # b.example.com 会落在同一节点，不会把一个站点拆散到多个出口。
+    #
+    # 不想要这个组：删掉本段，再把其余 22 个组里的
+    #   - "⚖️ 节点负载均衡"
+    # 那一行一并删掉即可。
+
+  - name: "🤖 AI服务"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+    # 本组不含中国香港节点：OpenAI / Anthropic / Google 均不支持中国香港
+
+  - name: "🧠 ChatGPT"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+    # 本组不含中国香港节点
+
+  - name: "🎭 Claude"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+    # 本组不含中国香港节点
+
+  - name: "✨ Gemini"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+    # 本组不含中国香港节点
+
+  - name: "🧩 Copilot"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+    # 本组不含中国香港节点
+
+  - name: "📺 油管专用"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇭🇰 中国香港节点"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+
+  - name: "🎬 流媒体"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇭🇰 中国香港节点"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+
+  - name: "💬 电报专用"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇭🇰 中国香港节点"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+
+  - name: "Ⓜ️ 微软服务"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇭🇰 中国香港节点"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+
+  - name: "🍎 苹果服务"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇭🇰 中国香港节点"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+
+  - name: "🔍 谷歌服务"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇭🇰 中国香港节点"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+
+  - name: "💰 币圈专用"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇭🇰 中国香港节点"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+
+  - name: "🎮 游戏平台"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "📋 节点手动选择"
+      - "♻️ 节点自动选择"
+      - "⚖️ 节点负载均衡"
+      - "🇭🇰 中国香港节点"
+      - "🇯🇵 日本节点"
+      - "🇸🇬 新加坡节点"
+      - "🇺🇸 美国节点"
+      - "🇨🇳 中国台湾节点"
+      - "🇰🇷 韩国节点"
+      - "🌍 其他地区"
+      - "DIRECT"
+
+  # ---------- 地区节点 ----------
+
+  # 提示：filter 仅对 include-all-proxies 生效。节点名不含地区标识的，
+  #       只会出现在「节点手动选择」「节点自动选择」「其他地区」里。
+  - name: "🇭🇰 中国香港节点"
+    type: url-test
+    include-all-proxies: true
+    filter: '(?i)🇭🇰|中国香港|香港|港|\bHK\b|\bHKG\b|Hong[ -]?Kong'
+    exclude-filter: "(?i)官网|流量|剩余|到期|过期|套餐|订阅|重置|邀请|客服|返利|购买|续费|试用|测速|群组|机场|traffic|expire|expired|subscription|reset|official|website"
+    exclude-type: "Direct"
+    url: "https://cp.cloudflare.com/generate_204"
+    interval: 300
+    expected-status: 204
+    tolerance: 50
+    lazy: true
+
+  - name: "🇯🇵 日本节点"
+    type: url-test
+    include-all-proxies: true
+    filter: '(?i)🇯🇵|日本|日|\bJP\b|\bJPN\b|Japan|Tokyo|Osaka'
+    exclude-filter: "(?i)官网|流量|剩余|到期|过期|套餐|订阅|重置|邀请|客服|返利|购买|续费|试用|测速|群组|机场|traffic|expire|expired|subscription|reset|official|website"
+    exclude-type: "Direct"
+    url: "https://cp.cloudflare.com/generate_204"
+    interval: 300
+    expected-status: 204
+    tolerance: 50
+    lazy: true
+
+  - name: "🇸🇬 新加坡节点"
+    type: url-test
+    include-all-proxies: true
+    filter: '(?i)🇸🇬|新加坡|新国|\bSG\b|\bSGP\b|Singapore'
+    exclude-filter: "(?i)官网|流量|剩余|到期|过期|套餐|订阅|重置|邀请|客服|返利|购买|续费|试用|测速|群组|机场|traffic|expire|expired|subscription|reset|official|website"
+    exclude-type: "Direct"
+    url: "https://cp.cloudflare.com/generate_204"
+    interval: 300
+    expected-status: 204
+    tolerance: 50
+    lazy: true
+
+  - name: "🇺🇸 美国节点"
+    type: url-test
+    include-all-proxies: true
+    filter: '(?i)🇺🇸|美国|美|\bUS\b|\bUSA\b|United[ -]?States|America|Los[ -]?Angeles|New[ -]?York|San[ -]?Francisco'
+    exclude-filter: "(?i)官网|流量|剩余|到期|过期|套餐|订阅|重置|邀请|客服|返利|购买|续费|试用|测速|群组|机场|traffic|expire|expired|subscription|reset|official|website"
+    exclude-type: "Direct"
+    url: "https://cp.cloudflare.com/generate_204"
+    interval: 300
+    expected-status: 204
+    tolerance: 50
+    lazy: true
+
+  - name: "🇨🇳 中国台湾节点"
+    type: url-test
+    include-all-proxies: true
+    filter: '(?i)🇹🇼|中国台湾|台湾|台|\bTW\b|\bTWN\b|Taiwan|Taipei'
+    exclude-filter: "(?i)官网|流量|剩余|到期|过期|套餐|订阅|重置|邀请|客服|返利|购买|续费|试用|测速|群组|机场|traffic|expire|expired|subscription|reset|official|website"
+    exclude-type: "Direct"
+    url: "https://cp.cloudflare.com/generate_204"
+    interval: 300
+    expected-status: 204
+    tolerance: 50
+    lazy: true
+
+  - name: "🇰🇷 韩国节点"
+    type: url-test
+    include-all-proxies: true
+    filter: '(?i)🇰🇷|韩国|韩|\bKR\b|\bKOR\b|Korea|Seoul|首尔'
+    exclude-filter: "(?i)官网|流量|剩余|到期|过期|套餐|订阅|重置|邀请|客服|返利|购买|续费|试用|测速|群组|机场|traffic|expire|expired|subscription|reset|official|website"
+    exclude-type: "Direct"
+    url: "https://cp.cloudflare.com/generate_204"
+    interval: 300
+    expected-status: 204
+    tolerance: 50
+    lazy: true
+
+  # ---------- 其他地区 ----------
+  #
+  # 【重要】使用 (?!) 负向先行断言排除已分地区节点。
+  # 依赖 mihomo 的 regexp2 引擎（.NET 风格，支持断言）；
+  # 原版 Clash / 使用 Go RE2 的客户端会编译失败。
+  - name: "🌍 其他地区"
+    type: select
+    include-all-proxies: true
+    filter: '(?i)^(?!.*(?:🇭🇰|🇯🇵|🇸🇬|🇺🇸|🇹🇼|🇰🇷|香港|日本|新加坡|美国|台湾|韩国|\bHK\b|\bHKG\b|\bJP\b|\bJPN\b|\bSG\b|\bSGP\b|\bUS\b|\bUSA\b|\bTW\b|\bTWN\b|\bKR\b|\bKOR\b|Hong[ -]?Kong|Japan|Tokyo|Osaka|Singapore|United[ -]?States|America|Los[ -]?Angeles|New[ -]?York|San[ -]?Francisco|Taiwan|Taipei|Korea|Seoul)).*'
+    exclude-filter: "(?i)官网|流量|剩余|到期|过期|套餐|订阅|重置|邀请|客服|返利|购买|续费|试用|测速|群组|机场|traffic|expire|expired|subscription|reset|official|website"
+    exclude-type: "Direct"
+
+  # ---------- 广告拦截 ----------
+  - name: "🛑 广告拦截"
+    type: select
+    proxies:
+      - REJECT
+      - DIRECT
+
+  - name: "🚀 兜底代理"
+    type: select
+    proxies:
+      - "🎯 节点选择"
+      - "DIRECT"
+    # 仅 MATCH 兜底；想改全局出口请去「🎯 节点选择」
+
+# ---------------- 规则 ----------------
+
+rules:
+
+  # 0. 【可选，默认关闭】全局封锁 QUIC（UDP/443）
+  #    背景：不少机场对 UDP 443 的转发质量明显差于 TCP，
+  #          表现是 YouTube / Google 首屏卡住、视频缓冲。
+  #          封掉 QUIC 后浏览器会自动回落到 HTTP/2 over TCP，通常更稳。
+  #    代价：所有 HTTP/3 站点失去 QUIC 加速；依赖 UDP 443 的应用受影响；
+  #          嗅探里的 QUIC 规则也就不再起作用。
+  #    需要时把下面这行的注释去掉，位置保持在最前。
+  # - "AND,((DST-PORT,443),(NETWORK,UDP)),REJECT"
+
+  # 1. 私有地址 / 局域网
+  - "GEOSITE,private,DIRECT"
+  - "GEOIP,private,DIRECT,no-resolve"
+  - "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve"
+  - "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve"
+  - "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve"
+
+  # 2. 广告
+  - "RULE-SET,ads,🛑 广告拦截"
+
+  # 3. 国内 AI 直连（必须在 AI 规则之前）
+  - "RULE-SET,ai-cn,DIRECT"
+
+  # 4. 游戏平台
+  #    顺序是刻意设计的：国服平台与 Steam 国内 CDN 先直连（快、省流量），
+  #    再走客户端进程识别（抓游戏内没有域名的连接），最后域名集兜底。
+  - "RULE-SET,game-cn,DIRECT"
+  - "RULE-SET,games,🎮 游戏平台"
+  - "GEOSITE,category-games,🎮 游戏平台"
+  - "GEOSITE,discord,🎮 游戏平台"
+
+  # 5. 国区服务直连（必须放在对应服务组之前）
+  - "GEOSITE,apple-cn,DIRECT"
+  - "GEOSITE,microsoft@cn,DIRECT"
+  - "DOMAIN-SUFFIX,windowsupdate.com,DIRECT"
+  - "DOMAIN-SUFFIX,download.windowsupdate.com,DIRECT"
+  - "DOMAIN-SUFFIX,delivery.mp.microsoft.com,DIRECT"
+  - "DOMAIN-SUFFIX,update.microsoft.com,DIRECT"
+
+  # 6. AI 分流
+  #    顺序：先各服务的辅助链路，再按服务拆组，最后用 AI 总集兜底。
+  - "RULE-SET,ai-openai,🧠 ChatGPT"
+  - "GEOSITE,openai,🧠 ChatGPT"
+  - "GEOSITE,anthropic,🎭 Claude"
+  - "GEOSITE,google-gemini,✨ Gemini"
+  - "GEOSITE,google-deepmind,✨ Gemini"
+  - "RULE-SET,ai-copilot,🧩 Copilot"
+  - "RULE-SET,ai-extra,🤖 AI服务"
+  - "RULE-SET,ai,🤖 AI服务"
+  # Anthropic 自有 IP 段，防止域名未命中时漏走
+  - "IP-CIDR,160.79.104.0/21,🎭 Claude,no-resolve"
+
+  # 7. YouTube
+  - "RULE-SET,youtube,📺 油管专用"
+
+  # 8. 币圈
+  - "RULE-SET,crypto,💰 币圈专用"
+
+  # 9. 流媒体
+  - "RULE-SET,disney,🎬 流媒体"
+  - "GEOSITE,netflix,🎬 流媒体"
+  - "GEOSITE,spotify,🎬 流媒体"
+  - "GEOSITE,tiktok,🎬 流媒体"
+
+  # 10. Apple
+  - "RULE-SET,apple,🍎 苹果服务"
+
+  # 11. Google
+  - "RULE-SET,google,🔍 谷歌服务"
+
+  # 12. Telegram
+  - "GEOSITE,telegram,💬 电报专用"
+
+  # 13. Microsoft
+  - "GEOSITE,microsoft,Ⓜ️ 微软服务"
+
+  # 14. 中国大陆
+  - "GEOSITE,CN,DIRECT"
+  - "GEOIP,CN,DIRECT,no-resolve"
+
+  # 15. 兜底
+  - "MATCH,🚀 兜底代理"
+
+
+# ============================================================
+# 规则源清单与甄别结论
+# ------------------------------------------------------------
+# 【采用】
+#   MetaCubeX/meta-rules-dat
+#     geo/geosite/category-ai-!cn     AI 总集（约 180 条），每日更新
+#     geo/geosite/openai              ChatGPT 主域名
+#     geo/geosite/anthropic           Claude 主域名
+#     geo/geosite/google-gemini       Gemini / AI Studio
+#     geo/geosite/google-deepmind     DeepMind
+#     来源：Perfect-Rules 的 ai.yaml 已包装 category-ai-!cn，
+#           其余分类直接以 GEOSITE 引用，无需额外 provider
+#
+#   MetaCubeX/meta-rules-dat（游戏部分）
+#     geo/geosite/category-games      海外游戏平台总集（约 1123 条），
+#                                     含 Steam / Epic / 战网 / Riot / Ubisoft /
+#                                     EA / GOG / Rockstar / 任天堂 / PS / Xbox
+#     geo/geosite/discord             category-games 未收录，单独补一条
+#     已验证 category-games 与 microsoft / apple / google / netflix /
+#     spotify / tiktok / telegram 分类零重叠，不会抢走其他分组的流量
+#
+#   国服平台与 Steam 国内 CDN 没有整段引用 category-games@cn，
+#   而是人工整理成 game-cn 内联集。原因：该分类含 steamserver.net
+#   （Steam 连接服务器，国内可达性不确定），整段直连有登录失败风险。
+#
+# 【部分采用】
+#   blackmatrix7/ios_rule_script
+#     rule/Clash/OpenAI|Claude|Gemini|Copilot
+#     采用原因：这四套的「辅助链路」（arkoselabs 验证码、statsig 功能开关、
+#               livekit 语音、azurefd/azureedge 文件上传）比 geosite 完整。
+#     未直接引用的原因：这四套同时塞进了大量共享基础设施域名 ——
+#               auth0.com / stripe.com / sentry.io / algolia.net /
+#               launchdarkly.com / segment.io / intercom.io。
+#               整段引入会让「任何用 Stripe 收款的国内站点」的支付请求
+#               被拖去 AI 出口。故改为人工提取有用的辅助域名，
+#               放进本配置的 ai-openai / ai-copilot 内联集。
+#
+# 【参考未采用】
+#   qianchongyang/openclash-ai-rules
+#     单文件 AI.list，Claude 覆盖较细（含 anthropic.auth0.com、
+#     statsig.anthropic.com、IP-CIDR 160.79.104.0/21）。已借鉴其
+#     Anthropic IP 段。仓库仅 1 star、无更新保障，不作为 provider。
+#
+# 【明确排除】
+#   jinxinkai/clash-ai-rules
+#     OpenAI.yaml 内含 DOMAIN-SUFFIX,microsoft.com / gstatic.com /
+#     live.com / sfx.ms / recaptcha.net / gvt1-3.com。
+#     这些是全互联网级域名，一旦挂在 AI 组，等于把所有微软服务和
+#     Google 静态资源都推给 AI 出口节点。属于严重误配，不予采用。
+#
+# 【外部依赖】
+#   AI 增强与游戏平台增强完全基于 inline provider，不新增外部规则源，
+#   断网/源站故障时这两块分流仍可正常工作。
+#   远程 provider 共 7 个（ads / ai / youtube / crypto / disney / apple /
+#   google），全部走 jsdelivr，且显式 proxy: DIRECT。
+#   网络不畅时内核启动会变慢。
+# ============================================================
+
+
+# ============================================================
+# 附：mitce 机场配置的核验结论
+# ------------------------------------------------------------
+# 参照对象：mitce 机场下发的完整配置（含真实节点凭据）。
+# 只吸收结构性做法，不复制其 proxies / external-controller / 订阅地址。
+#
+# 【已吸收】
+#   1. profile.store-selected / store-fake-ip
+#   2. dns.respect-rules + direct-nameserver + direct-nameserver-follow-policy
+#   3. rule-providers 显式 proxy: DIRECT
+#   4. ntp 时间同步
+#   5. tun.endpoint-independent-nat
+#   6. load-balance 组（strategy: consistent-hashing）
+#   7. fake-ip-filter 补 '*.arpa'
+#   8. url-test 组加 expected-status: 204（mitce 未做，属本次额外加固）
+#   9. geo-auto-update（mitce 未做，属本次额外加固）
+#
+# 【核验后未采用】
+#   format: mrs
+#     官方限制：mrs 的 behavior 只能是 domain / ipcidr。
+#     本配置的 7 个远程 provider 都是 behavior: classical（Perfect-Rules
+#     只提供 yaml），无法转 mrs，除非换规则源。
+#
+#   fallback + fallback-filter
+#     mitce 用的是老一代「国内/国外双 DNS 分流」方案：
+#     靠 fallback-filter 的 geoip/domain 名单猜哪些结果被污染。
+#     现在官方给了 direct-nameserver，是按「这条域名实际走哪个出口」
+#     动态选解析器，比猜名单准。两者同时开会让解析路径互相打架，
+#     所以只保留 direct-nameserver 一条路。
+#     另注：fallback-filter.geosite 官方已标注「该字段已废弃」。
+#
+#   global-client-fingerprint: chrome
+#     官方已弃用，文档明确写着「请直接在 proxy 内设置
+#     client-fingerprint」。写了不报错但不生效，属于噪音，故不加。
+#
+#   dns.use-hosts: false / use-system-hosts: false
+#     两者默认都是 true。关掉会忽略系统 hosts 文件，
+#     对习惯用 hosts 做本地映射/屏蔽的人是反向优化，故保持默认。
+#
+#   tun.stack: system
+#     官方建议值其实是 mixed（TCP 系统栈 + UDP gvisor 栈）。
+#     mitce 用 system 也能跑，但 mixed 兼容性更好，故保持 mixed。
+#
+#   dns.listen: ':53'
+#     监听全网卡 53 端口，在 Windows 上容易和其他 DNS 服务抢端口。
+#     本配置保留 127.0.0.1:1053；TUN 的 dns-hijack 会把 any:53 直接
+#     导入内部 DNS 模块，不依赖这个 listen。
+#
+#   AND,((DST-PORT,443),(NETWORK,UDP)),REJECT
+#     全局封 QUIC。有效但过于激进，会连国内直连站点的 HTTP/3 一起封。
+#     已作为可选规则写进 rules 第 0 节（默认注释掉）。
+#
+#   tun.mtu: 1500
+#     官方文档：MTU「一般用户默认即可」。无明确收益，不改。
+#
+# 【mitce 有而本配置不需要的】
+#   Bahamut / GoogleFCM / Speedtest / 负载均衡地区细分（HK/JP/…）
+#     Bahamut 是中国台湾地区动画疯，GoogleFCM 是 Android 推送；
+#     本配置面向 Windows 桌面，用不上。
+#   纯 IP 规则集（China-IP / Apple-IP / Netflix-IP …）
+#     本配置用 GEOIP,CN + GEOIP,private 覆盖，功能等价且条目更少。
+#   无广告拦截、无进程识别
+#     这两块是本配置的增量优势，不反向对齐。
+# ============================================================
