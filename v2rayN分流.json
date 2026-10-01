@@ -263,6 +263,7 @@
       "domain:fireflies.ai",
       "domain:tldv.io",
       "domain:granola.ai",
+      "domain:tokenharbor.ai",
       "domain:together.ai",
       "domain:together.xyz",
       "domain:deepinfra.com",
@@ -352,13 +353,6 @@
     "outboundTag": "proxy",
     "domain": [
       "geosite:apple"
-    ]
-  },
-  {
-    "remarks": "币圈",
-    "outboundTag": "proxy",
-    "domain": [
-      "geosite:category-cryptocurrency"
     ]
   },
   {

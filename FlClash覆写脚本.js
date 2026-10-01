@@ -1,7 +1,7 @@
 /* ============================================================
  * Clash 完美分流 · AI 强化版 —— FlClash 脚本覆写版
  *
- * 对应文件：Clash_merge_AI.yaml v4
+ * 对应文件：Clash_可维护.yaml（唯一真源，桌面 → 分流规则文件 目录）
  * 适用：FlClash（mihomo 内核）
  *
  * 【为什么需要这个脚本】
@@ -32,7 +32,7 @@
  *     use + filter 的方式筛选，同样能正常工作。
  *
  * 数据段（RULE_PROVIDERS / RULES / REGIONS / NOTICE / TEST_URL）
- * 由同目录的「生成FlClash覆写脚本.py」从 Clash_merge_AI.yaml 自动提取，
+ * 由「生成FlClash覆写脚本.py」从 Clash_可维护.yaml 自动提取，
  * 保证与 Windows 版逐字节一致。改完 YAML 请重跑那个脚本，不要手改本文件。
  * ============================================================ */
 
@@ -60,14 +60,6 @@ const RULE_PROVIDERS = {
     "interval": 86400,
     "proxy": "DIRECT",
     "url": "https://cdn.jsdelivr.net/gh/n0de-sudo/Perfect-Rules@main/Clash/rules/youtube.yaml"
-  },
-  "crypto": {
-    "type": "http",
-    "behavior": "classical",
-    "format": "yaml",
-    "interval": 86400,
-    "proxy": "DIRECT",
-    "url": "https://cdn.jsdelivr.net/gh/n0de-sudo/Perfect-Rules@main/Clash/rules/crypto.yaml"
   },
   "disney": {
     "type": "http",
@@ -226,6 +218,7 @@ const RULE_PROVIDERS = {
       "DOMAIN-SUFFIX,fireflies.ai",
       "DOMAIN-SUFFIX,tldv.io",
       "DOMAIN-SUFFIX,granola.ai",
+      "DOMAIN-SUFFIX,tokenharbor.ai",
       "DOMAIN-SUFFIX,together.ai",
       "DOMAIN-SUFFIX,together.xyz",
       "DOMAIN-SUFFIX,deepinfra.com",
@@ -321,7 +314,6 @@ const RULES = [
   "RULE-SET,ai,🤖 AI服务",
   "IP-CIDR,160.79.104.0/21,🎭 Claude,no-resolve",
   "RULE-SET,youtube,📺 油管专用",
-  "RULE-SET,crypto,💰 币圈专用",
   "RULE-SET,disney,🎬 流媒体",
   "GEOSITE,netflix,🎬 流媒体",
   "GEOSITE,spotify,🎬 流媒体",
@@ -429,7 +421,7 @@ function main(config) {
 
   const AI_GROUPS = ['🤖 AI服务', '🧠 ChatGPT', '🎭 Claude', '✨ Gemini', '🧩 Copilot'];
   const SERVICE_GROUPS = ['📺 油管专用', '🎬 流媒体', '💬 电报专用', 'Ⓜ️ 微软服务',
-                          '🍎 苹果服务', '🔍 谷歌服务', '💰 币圈专用', '🎮 游戏平台'];
+                          '🍎 苹果服务', '🔍 谷歌服务', '🎮 游戏平台'];
 
   const aiGroups = AI_GROUPS.map(function (n) { return fixed(n, 'select', AI); });
   const serviceGroups = SERVICE_GROUPS.map(function (n) { return fixed(n, 'select', STD); });
@@ -444,7 +436,8 @@ function main(config) {
 
   const tailGroups = [
     fixed('🛑 广告拦截', 'select', [REJECT, DIRECT]),
-    fixed('🚀 兜底代理', 'select', ['🎯 节点选择', DIRECT]),
+    // 候选列表由生成器从 YAML 直接搬过来 —— 只给 MATCH 兜底用
+    fixed('🚀 兜底代理', 'select', ["🎯 节点选择", "♻️ 节点自动选择", "⚖️ 节点负载均衡", DIRECT]),
   ];
 
   // ---- 4. 合并 rule-providers（保留订阅自带的，不覆盖）----
