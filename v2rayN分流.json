@@ -21,6 +21,14 @@
     ]
   },
   {
+    "remarks": "SideStore：存活检查与 GitHub Release 资源走代理",
+    "outboundTag": "proxy",
+    "domain": [
+      "domain:alive.github.com",
+      "domain:release-assets.githubusercontent.com"
+    ]
+  },
+  {
     "remarks": "国区域名（.cn）直连",
     "outboundTag": "direct",
     "domain": [

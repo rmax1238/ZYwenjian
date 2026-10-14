@@ -293,6 +293,8 @@ const RULES = [
   "IP-CIDR,127.0.0.0/8,DIRECT,no-resolve",
   "IP-CIDR,224.0.0.0/4,DIRECT,no-resolve",
   "IP-CIDR,255.255.255.255/32,DIRECT,no-resolve",
+  "DOMAIN-SUFFIX,alive.github.com,🔍 谷歌服务",
+  "DOMAIN-SUFFIX,release-assets.githubusercontent.com,🔍 谷歌服务",
   "RULE-SET,ads,🛑 广告拦截",
   "RULE-SET,ai-cn,DIRECT",
   "RULE-SET,game-cn,DIRECT",
@@ -330,12 +332,12 @@ const RULES = [
 const NOTICE = /官网|流量|剩余|到期|过期|套餐|订阅|重置|邀请|客服|返利|购买|续费|试用|测速|群组|机场|traffic|expire|expired|subscription|reset|official|website/i;
 
 const REGIONS = [
-  { name: "🇭🇰 中国香港节点", filter: "🇭🇰|中国香港|香港|港|\\bHK\\b|\\bHKG\\b|Hong[ -]?Kong", re: /🇭🇰|中国香港|香港|港|\bHK\b|\bHKG\b|Hong[ -]?Kong/i },
-  { name: "🇯🇵 日本节点", filter: "🇯🇵|日本|日|\\bJP\\b|\\bJPN\\b|Japan|Tokyo|Osaka", re: /🇯🇵|日本|日|\bJP\b|\bJPN\b|Japan|Tokyo|Osaka/i },
+  { name: "🇭🇰 中国香港节点", filter: "🇭🇰|中国香港|香港|\\bHK\\b|\\bHKG\\b|Hong[ -]?Kong", re: /🇭🇰|中国香港|香港|\bHK\b|\bHKG\b|Hong[ -]?Kong/i },
+  { name: "🇯🇵 日本节点", filter: "🇯🇵|日本|\\bJP\\b|\\bJPN\\b|Japan|Tokyo|Osaka", re: /🇯🇵|日本|\bJP\b|\bJPN\b|Japan|Tokyo|Osaka/i },
   { name: "🇸🇬 新加坡节点", filter: "🇸🇬|新加坡|新国|\\bSG\\b|\\bSGP\\b|Singapore", re: /🇸🇬|新加坡|新国|\bSG\b|\bSGP\b|Singapore/i },
-  { name: "🇺🇸 美国节点", filter: "🇺🇸|美国|美|\\bUS\\b|\\bUSA\\b|United[ -]?States|America|Los[ -]?Angeles|New[ -]?York|San[ -]?Francisco", re: /🇺🇸|美国|美|\bUS\b|\bUSA\b|United[ -]?States|America|Los[ -]?Angeles|New[ -]?York|San[ -]?Francisco/i },
-  { name: "🇨🇳 中国台湾节点", filter: "🇹🇼|中国台湾|台湾|台|\\bTW\\b|\\bTWN\\b|Taiwan|Taipei", re: /🇹🇼|中国台湾|台湾|台|\bTW\b|\bTWN\b|Taiwan|Taipei/i },
-  { name: "🇰🇷 韩国节点", filter: "🇰🇷|韩国|韩|\\bKR\\b|\\bKOR\\b|Korea|Seoul|首尔", re: /🇰🇷|韩国|韩|\bKR\b|\bKOR\b|Korea|Seoul|首尔/i },
+  { name: "🇺🇸 美国节点", filter: "🇺🇸|美国|美西|美东|美中|\\bUS\\b|\\bUSA\\b|United[ -]?States|America|Los[ -]?Angeles|New[ -]?York|San[ -]?Francisco", re: /🇺🇸|美国|美西|美东|美中|\bUS\b|\bUSA\b|United[ -]?States|America|Los[ -]?Angeles|New[ -]?York|San[ -]?Francisco/i },
+  { name: "🇹🇼 中国台湾节点", filter: "🇹🇼|中国台湾|台湾|\\bTW\\b|\\bTWN\\b|Taiwan|Taipei", re: /🇹🇼|中国台湾|台湾|\bTW\b|\bTWN\b|Taiwan|Taipei/i },
+  { name: "🇰🇷 韩国节点", filter: "🇰🇷|韩国|\\bKR\\b|\\bKOR\\b|Korea|Seoul|首尔", re: /🇰🇷|韩国|\bKR\b|\bKOR\b|Korea|Seoul|首尔/i },
 ];
 const OTHER_NAME = "🌍 其他地区";
 const HK_NAME = "🇭🇰 中国香港节点";
