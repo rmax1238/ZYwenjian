@@ -1,0 +1,1787 @@
+{
+  "log": {
+    "level": "info",
+    "timestamp": true
+  },
+  "experimental": {
+    "clash_api": {
+      "external_controller": "127.0.0.1:9090",
+      "external_ui": "ui",
+      "secret": "",
+      "external_ui_download_url": "https://gh-proxy.com/https://github.com/MetaCubeX/metacubexd/archive/refs/heads/gh-pages.zip",
+      "external_ui_download_detour": "direct",
+      "default_mode": "rule"
+    },
+    "cache_file": {
+      "enabled": true,
+      "store_fakeip": false
+    }
+  },
+  "dns": {
+    "servers": [
+      {
+        "tag": "proxyDns",
+        "type": "tls",
+        "server": "8.8.8.8",
+        "server_port": 853,
+        "detour": "Proxy"
+      },
+      {
+        "tag": "localDns",
+        "type": "https",
+        "server": "223.5.5.5",
+        "server_port": 443,
+        "path": "/dns-query"
+      }
+    ],
+    "rules": [
+      {
+        "rule_set": "geosite-cn",
+        "server": "localDns"
+      },
+      {
+        "clash_mode": "direct",
+        "server": "localDns"
+      },
+      {
+        "clash_mode": "global",
+        "server": "proxyDns"
+      },
+      {
+        "rule_set": "geosite-geolocation-!cn",
+        "server": "proxyDns"
+      }
+    ],
+    "final": "localDns",
+    "strategy": "ipv4_only"
+  },
+  "inbounds": [
+    {
+      "tag": "tun-in",
+      "type": "tun",
+      "address": [
+        "172.19.0.0/30"
+      ],
+      "mtu": 9000,
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "system",
+      "platform": {
+        "http_proxy": {
+          "enabled": true,
+          "server": "127.0.0.1",
+          "server_port": 2080
+        }
+      }
+    },
+    {
+      "tag": "mixed-in",
+      "type": "mixed",
+      "listen": "127.0.0.1",
+      "listen_port": 2080
+    }
+  ],
+  "outbounds": [
+    {
+      "tag": "Proxy",
+      "type": "selector",
+      "outbounds": [
+        "auto",
+        "direct"
+      ]
+    },
+    {
+      "tag": "OpenAI",
+      "type": "selector",
+      "outbounds": [
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America",
+        "Others"
+      ],
+      "default": "America"
+    },
+    {
+      "tag": "Google",
+      "type": "selector",
+      "outbounds": [
+        "HongKong",
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America",
+        "Others"
+      ]
+    },
+    {
+      "tag": "Telegram",
+      "type": "selector",
+      "outbounds": [
+        "HongKong",
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America",
+        "Others"
+      ]
+    },
+    {
+      "tag": "Twitter",
+      "type": "selector",
+      "outbounds": [
+        "HongKong",
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America",
+        "Others"
+      ]
+    },
+    {
+      "tag": "Facebook",
+      "type": "selector",
+      "outbounds": [
+        "HongKong",
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America",
+        "Others"
+      ]
+    },
+    {
+      "tag": "BiliBili",
+      "type": "selector",
+      "outbounds": [
+        "direct",
+        "HongKong",
+        "TaiWan"
+      ]
+    },
+    {
+      "tag": "Bahamut",
+      "type": "selector",
+      "outbounds": [
+        "TaiWan",
+        "Proxy"
+      ]
+    },
+    {
+      "tag": "Spotify",
+      "type": "selector",
+      "outbounds": [
+        "HongKong",
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America",
+        "Others"
+      ],
+      "default": "America"
+    },
+    {
+      "tag": "TikTok",
+      "type": "selector",
+      "outbounds": [
+        "HongKong",
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America"
+      ],
+      "default": "Japan"
+    },
+    {
+      "tag": "Netflix",
+      "type": "selector",
+      "outbounds": [
+        "HongKong",
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America",
+        "Others"
+      ]
+    },
+    {
+      "tag": "Disney+",
+      "type": "selector",
+      "outbounds": [
+        "HongKong",
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America",
+        "Others"
+      ]
+    },
+    {
+      "tag": "Apple",
+      "type": "selector",
+      "outbounds": [
+        "direct",
+        "HongKong",
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America",
+        "Others"
+      ]
+    },
+    {
+      "tag": "Microsoft",
+      "type": "selector",
+      "outbounds": [
+        "direct",
+        "HongKong",
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America",
+        "Others"
+      ]
+    },
+    {
+      "tag": "Games",
+      "type": "selector",
+      "outbounds": [
+        "direct",
+        "HongKong",
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America",
+        "Others"
+      ]
+    },
+    {
+      "tag": "Streaming",
+      "type": "selector",
+      "outbounds": [
+        "HongKong",
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America",
+        "Others"
+      ]
+    },
+    {
+      "tag": "Global",
+      "type": "selector",
+      "outbounds": [
+        "HongKong",
+        "TaiWan",
+        "Singapore",
+        "Japan",
+        "America",
+        "Others",
+        "direct"
+      ]
+    },
+    {
+      "tag": "China",
+      "type": "selector",
+      "outbounds": [
+        "direct",
+        "Proxy"
+      ]
+    },
+    {
+      "tag": "HongKong",
+      "type": "selector",
+      "outbounds": [
+        "auto",
+        "direct"
+      ]
+    },
+    {
+      "tag": "TaiWan",
+      "type": "selector",
+      "outbounds": [
+        "auto",
+        "direct"
+      ]
+    },
+    {
+      "tag": "Singapore",
+      "type": "selector",
+      "outbounds": [
+        "auto",
+        "direct"
+      ]
+    },
+    {
+      "tag": "Japan",
+      "type": "selector",
+      "outbounds": [
+        "auto",
+        "direct"
+      ]
+    },
+    {
+      "tag": "America",
+      "type": "selector",
+      "outbounds": [
+        "US - United States 04(Free)",
+        "US - United States 03(Free)",
+        "US - United States 02(Free)",
+        "US - United States 01",
+        "auto",
+        "direct"
+      ]
+    },
+    {
+      "tag": "Others",
+      "type": "selector",
+      "outbounds": [
+        "GB - United Kingdom 182(Free)",
+        "GB - United Kingdom 130(Free)",
+        "GB - United Kingdom 129",
+        "GB - United Kingdom 181(Free)",
+        "GB - United Kingdom 132",
+        "GB - United Kingdom 131(Free)",
+        "GB - United Kingdom 180(Free)",
+        "GB - United Kingdom 134(Free)",
+        "GB - United Kingdom 133",
+        "GB - United Kingdom 179(Free)",
+        "GB - United Kingdom 136(Free)",
+        "GB - United Kingdom 135",
+        "GB - United Kingdom 178(Free)",
+        "GB - United Kingdom 177(Free)",
+        "GB - United Kingdom 161",
+        "GB - United Kingdom 176(Free)",
+        "GB - United Kingdom 175(Free)",
+        "GB - United Kingdom 163",
+        "GB - United Kingdom 174",
+        "GB - United Kingdom 173",
+        "GB - United Kingdom 165",
+        "GB - United Kingdom 172",
+        "GB - United Kingdom 171",
+        "GB - United Kingdom 167",
+        "GB - United Kingdom 170",
+        "GB - United Kingdom 169",
+        "GB - United Kingdom 159",
+        "GB - United Kingdom 168(Free)",
+        "GB - United Kingdom 145(Free)",
+        "GB - United Kingdom 166(Free)",
+        "GB - United Kingdom 150",
+        "GB - United Kingdom 149(Free)",
+        "GB - United Kingdom 164(Free)",
+        "GB - United Kingdom 153(Free)",
+        "GB - United Kingdom 151",
+        "GB - United Kingdom 162(Free)",
+        "GB - United Kingdom 158",
+        "GB - United Kingdom 157(Free)",
+        "GB - United Kingdom 160(Free)",
+        "GB - United Kingdom 138(Free)",
+        "GB - United Kingdom 137",
+        "KR - South Korea 01",
+        "GB - United Kingdom 64",
+        "GB - United Kingdom 63",
+        "GB - United Kingdom 62",
+        "GB - United Kingdom 61",
+        "GB - United Kingdom 60",
+        "GB - United Kingdom 59",
+        "GB - United Kingdom 58",
+        "GB - United Kingdom 57",
+        "GB - United Kingdom 56",
+        "GB - United Kingdom 55",
+        "CA - Canada 01",
+        "AE - United Arab Emirates 01",
+        "AE - United Arab Emirates 02",
+        "AE - United Arab Emirates 03",
+        "AE - United Arab Emirates 04",
+        "AE - United Arab Emirates 05",
+        "AE - United Arab Emirates 06",
+        "NL - Netherlands 01",
+        "FI - Finland 01",
+        "DE - Germany 01",
+        "DE - Germany 02",
+        "NL - Netherlands 02",
+        "auto",
+        "direct"
+      ]
+    },
+    {
+      "tag": "auto",
+      "type": "urltest",
+      "outbounds": [
+        "GB - United Kingdom 182(Free)",
+        "GB - United Kingdom 130(Free)",
+        "GB - United Kingdom 129",
+        "GB - United Kingdom 181(Free)",
+        "GB - United Kingdom 132",
+        "GB - United Kingdom 131(Free)",
+        "GB - United Kingdom 180(Free)",
+        "GB - United Kingdom 134(Free)",
+        "GB - United Kingdom 133",
+        "GB - United Kingdom 179(Free)",
+        "GB - United Kingdom 136(Free)",
+        "GB - United Kingdom 135",
+        "GB - United Kingdom 178(Free)",
+        "GB - United Kingdom 177(Free)",
+        "GB - United Kingdom 161",
+        "US - United States 04(Free)",
+        "US - United States 03(Free)",
+        "US - United States 02(Free)",
+        "US - United States 01",
+        "GB - United Kingdom 176(Free)",
+        "GB - United Kingdom 175(Free)",
+        "GB - United Kingdom 163",
+        "GB - United Kingdom 174",
+        "GB - United Kingdom 173",
+        "GB - United Kingdom 165",
+        "GB - United Kingdom 172",
+        "GB - United Kingdom 171",
+        "GB - United Kingdom 167",
+        "GB - United Kingdom 170",
+        "GB - United Kingdom 169",
+        "GB - United Kingdom 159",
+        "GB - United Kingdom 168(Free)",
+        "GB - United Kingdom 145(Free)",
+        "GB - United Kingdom 166(Free)",
+        "GB - United Kingdom 150",
+        "GB - United Kingdom 149(Free)",
+        "GB - United Kingdom 164(Free)",
+        "GB - United Kingdom 153(Free)",
+        "GB - United Kingdom 151",
+        "GB - United Kingdom 162(Free)",
+        "GB - United Kingdom 158",
+        "GB - United Kingdom 157(Free)",
+        "GB - United Kingdom 160(Free)",
+        "GB - United Kingdom 138(Free)",
+        "GB - United Kingdom 137",
+        "KR - South Korea 01",
+        "GB - United Kingdom 64",
+        "GB - United Kingdom 63",
+        "GB - United Kingdom 62",
+        "GB - United Kingdom 61",
+        "GB - United Kingdom 60",
+        "GB - United Kingdom 59",
+        "GB - United Kingdom 58",
+        "GB - United Kingdom 57",
+        "GB - United Kingdom 56",
+        "GB - United Kingdom 55",
+        "CA - Canada 01",
+        "AE - United Arab Emirates 01",
+        "AE - United Arab Emirates 02",
+        "AE - United Arab Emirates 03",
+        "AE - United Arab Emirates 04",
+        "AE - United Arab Emirates 05",
+        "AE - United Arab Emirates 06",
+        "NL - Netherlands 01",
+        "FI - Finland 01",
+        "DE - Germany 01",
+        "DE - Germany 02",
+        "NL - Netherlands 02"
+      ],
+      "url": "http://www.gstatic.com/generate_204",
+      "interval": "10m",
+      "tolerance": 50
+    },
+    {
+      "type": "direct",
+      "tag": "direct"
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 182(Free)",
+      "server": "62.164.143.237",
+      "server_port": 38396,
+      "password": "40sIS46rJBCWcRDg",
+      "transport": {
+        "type": "ws",
+        "path": "/nawul0ol",
+        "headers": {
+          "Host": "62.164.143.237"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 130(Free)",
+      "server": "62.164.143.237",
+      "server_port": 38396,
+      "password": "40sIS46rJBCWcRDg",
+      "transport": {
+        "type": "ws",
+        "path": "/nawul0ol",
+        "headers": {
+          "Host": "62.164.143.237"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 129",
+      "server": "62.164.143.237",
+      "server_port": 38396,
+      "password": "40sIS46rJBCWcRDg",
+      "transport": {
+        "type": "ws",
+        "path": "/nawul0ol",
+        "headers": {
+          "Host": "62.164.143.237"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 181(Free)",
+      "server": "194.46.58.165",
+      "server_port": 28339,
+      "password": "OTgp3zP2ZSuIwOv6",
+      "transport": {
+        "type": "ws",
+        "path": "/dgg6kdfg",
+        "headers": {
+          "Host": "194.46.58.165"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 132",
+      "server": "194.46.58.165",
+      "server_port": 28339,
+      "password": "OTgp3zP2ZSuIwOv6",
+      "transport": {
+        "type": "ws",
+        "path": "/dgg6kdfg",
+        "headers": {
+          "Host": "194.46.58.165"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 131(Free)",
+      "server": "194.46.58.165",
+      "server_port": 28339,
+      "password": "OTgp3zP2ZSuIwOv6",
+      "transport": {
+        "type": "ws",
+        "path": "/dgg6kdfg",
+        "headers": {
+          "Host": "194.46.58.165"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 180(Free)",
+      "server": "62.164.143.119",
+      "server_port": 45256,
+      "password": "NHayzw2SgQrr9Mui",
+      "transport": {
+        "type": "ws",
+        "path": "/yl0yo0m7",
+        "headers": {
+          "Host": "62.164.143.119"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 134(Free)",
+      "server": "62.164.143.119",
+      "server_port": 45256,
+      "password": "NHayzw2SgQrr9Mui",
+      "transport": {
+        "type": "ws",
+        "path": "/yl0yo0m7",
+        "headers": {
+          "Host": "62.164.143.119"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 133",
+      "server": "62.164.143.119",
+      "server_port": 45256,
+      "password": "NHayzw2SgQrr9Mui",
+      "transport": {
+        "type": "ws",
+        "path": "/yl0yo0m7",
+        "headers": {
+          "Host": "62.164.143.119"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 179(Free)",
+      "server": "62.164.143.117",
+      "server_port": 47933,
+      "password": "AWrcOC0MC9IxQ5Rp",
+      "transport": {
+        "type": "ws",
+        "path": "/bz2glmwc",
+        "headers": {
+          "Host": "62.164.143.117"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 136(Free)",
+      "server": "62.164.143.117",
+      "server_port": 47933,
+      "password": "AWrcOC0MC9IxQ5Rp",
+      "transport": {
+        "type": "ws",
+        "path": "/bz2glmwc",
+        "headers": {
+          "Host": "62.164.143.117"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 135",
+      "server": "62.164.143.117",
+      "server_port": 47933,
+      "password": "AWrcOC0MC9IxQ5Rp",
+      "transport": {
+        "type": "ws",
+        "path": "/bz2glmwc",
+        "headers": {
+          "Host": "62.164.143.117"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 178(Free)",
+      "server": "213.193.253.71",
+      "server_port": 61456,
+      "password": "HHbwT3B6Fb7NjdcE",
+      "transport": {
+        "type": "ws",
+        "path": "/kxjcdco7",
+        "headers": {
+          "Host": "213.193.253.71"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 177(Free)",
+      "server": "213.193.253.71",
+      "server_port": 61456,
+      "password": "HHbwT3B6Fb7NjdcE",
+      "transport": {
+        "type": "ws",
+        "path": "/kxjcdco7",
+        "headers": {
+          "Host": "213.193.253.71"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 161",
+      "server": "213.193.253.71",
+      "server_port": 61456,
+      "password": "HHbwT3B6Fb7NjdcE",
+      "transport": {
+        "type": "ws",
+        "path": "/kxjcdco7",
+        "headers": {
+          "Host": "213.193.253.71"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "US - United States 04(Free)",
+      "server": "23.134.76.73",
+      "server_port": 19177,
+      "password": "2WJdfHKkmzsPiH5S",
+      "transport": {
+        "type": "ws",
+        "path": "/pps33lf8",
+        "headers": {
+          "Host": "23.134.76.73"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "US - United States 03(Free)",
+      "server": "23.134.76.73",
+      "server_port": 19177,
+      "password": "2WJdfHKkmzsPiH5S",
+      "transport": {
+        "type": "ws",
+        "path": "/pps33lf8",
+        "headers": {
+          "Host": "23.134.76.73"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "US - United States 02(Free)",
+      "server": "23.134.76.73",
+      "server_port": 19177,
+      "password": "2WJdfHKkmzsPiH5S",
+      "transport": {
+        "type": "ws",
+        "path": "/pps33lf8",
+        "headers": {
+          "Host": "23.134.76.73"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "US - United States 01",
+      "server": "23.134.76.72",
+      "server_port": 42204,
+      "password": "qv3FHvFVdovEhZij",
+      "transport": {
+        "type": "ws",
+        "path": "/wag9cuk1",
+        "headers": {
+          "Host": "23.134.76.72"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 176(Free)",
+      "server": "62.164.142.179",
+      "server_port": 22277,
+      "password": "7XvMzy4aWL7zBVpQ",
+      "transport": {
+        "type": "ws",
+        "path": "/acelf4sq",
+        "headers": {
+          "Host": "62.164.142.179"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 175(Free)",
+      "server": "62.164.142.179",
+      "server_port": 22277,
+      "password": "7XvMzy4aWL7zBVpQ",
+      "transport": {
+        "type": "ws",
+        "path": "/acelf4sq",
+        "headers": {
+          "Host": "62.164.142.179"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 163",
+      "server": "62.164.142.179",
+      "server_port": 22277,
+      "password": "7XvMzy4aWL7zBVpQ",
+      "transport": {
+        "type": "ws",
+        "path": "/acelf4sq",
+        "headers": {
+          "Host": "62.164.142.179"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 174",
+      "server": "95.133.243.211",
+      "server_port": 36253,
+      "password": "Lr42igMRC7s0jrj2",
+      "transport": {
+        "type": "ws",
+        "path": "/1517mfwn",
+        "headers": {
+          "Host": "95.133.243.211"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 173",
+      "server": "95.133.243.211",
+      "server_port": 36253,
+      "password": "Lr42igMRC7s0jrj2",
+      "transport": {
+        "type": "ws",
+        "path": "/1517mfwn",
+        "headers": {
+          "Host": "95.133.243.211"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 165",
+      "server": "95.133.243.211",
+      "server_port": 36253,
+      "password": "Lr42igMRC7s0jrj2",
+      "transport": {
+        "type": "ws",
+        "path": "/1517mfwn",
+        "headers": {
+          "Host": "95.133.243.211"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 172",
+      "server": "62.164.142.177",
+      "server_port": 57015,
+      "password": "FSUnECf0icaePy3T",
+      "transport": {
+        "type": "ws",
+        "path": "/lr1llh03",
+        "headers": {
+          "Host": "62.164.142.177"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 171",
+      "server": "62.164.142.177",
+      "server_port": 57015,
+      "password": "FSUnECf0icaePy3T",
+      "transport": {
+        "type": "ws",
+        "path": "/lr1llh03",
+        "headers": {
+          "Host": "62.164.142.177"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 167",
+      "server": "62.164.142.177",
+      "server_port": 57015,
+      "password": "FSUnECf0icaePy3T",
+      "transport": {
+        "type": "ws",
+        "path": "/lr1llh03",
+        "headers": {
+          "Host": "62.164.142.177"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 170",
+      "server": "95.133.243.199",
+      "server_port": 21452,
+      "password": "vvLGD2pFA3iz4D3b",
+      "transport": {
+        "type": "ws",
+        "path": "/8ufq7acg",
+        "headers": {
+          "Host": "95.133.243.199"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 169",
+      "server": "95.133.243.199",
+      "server_port": 21452,
+      "password": "vvLGD2pFA3iz4D3b",
+      "transport": {
+        "type": "ws",
+        "path": "/8ufq7acg",
+        "headers": {
+          "Host": "95.133.243.199"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 159",
+      "server": "95.133.243.199",
+      "server_port": 21452,
+      "password": "vvLGD2pFA3iz4D3b",
+      "transport": {
+        "type": "ws",
+        "path": "/8ufq7acg",
+        "headers": {
+          "Host": "95.133.243.199"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 168(Free)",
+      "server": "194.46.58.243",
+      "server_port": 51200,
+      "password": "BWMJ6tjfpWDj3W90",
+      "transport": {
+        "type": "ws",
+        "path": "/f54wzwq3",
+        "headers": {
+          "Host": "194.46.58.243"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 145(Free)",
+      "server": "194.46.58.243",
+      "server_port": 51200,
+      "password": "BWMJ6tjfpWDj3W90",
+      "transport": {
+        "type": "ws",
+        "path": "/f54wzwq3",
+        "headers": {
+          "Host": "194.46.58.243"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 166(Free)",
+      "server": "62.164.143.231",
+      "server_port": 19143,
+      "password": "0yH0IQRjJ86yKL3o",
+      "transport": {
+        "type": "ws",
+        "path": "/98kr115w",
+        "headers": {
+          "Host": "62.164.143.231"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 150",
+      "server": "62.164.143.231",
+      "server_port": 19143,
+      "password": "0yH0IQRjJ86yKL3o",
+      "transport": {
+        "type": "ws",
+        "path": "/98kr115w",
+        "headers": {
+          "Host": "62.164.143.231"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 149(Free)",
+      "server": "62.164.143.231",
+      "server_port": 19143,
+      "password": "0yH0IQRjJ86yKL3o",
+      "transport": {
+        "type": "ws",
+        "path": "/98kr115w",
+        "headers": {
+          "Host": "62.164.143.231"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 164(Free)",
+      "server": "62.164.142.161",
+      "server_port": 23366,
+      "password": "NKd5qY5TmSDLkLwV",
+      "transport": {
+        "type": "ws",
+        "path": "/nqz6smy5",
+        "headers": {
+          "Host": "62.164.142.161"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 153(Free)",
+      "server": "62.164.142.161",
+      "server_port": 23366,
+      "password": "NKd5qY5TmSDLkLwV",
+      "transport": {
+        "type": "ws",
+        "path": "/nqz6smy5",
+        "headers": {
+          "Host": "62.164.142.161"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 151",
+      "server": "62.164.142.161",
+      "server_port": 23366,
+      "password": "NKd5qY5TmSDLkLwV",
+      "transport": {
+        "type": "ws",
+        "path": "/nqz6smy5",
+        "headers": {
+          "Host": "62.164.142.161"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 162(Free)",
+      "server": "95.133.243.71",
+      "server_port": 62198,
+      "password": "2XHf484J0ICkczKb",
+      "transport": {
+        "type": "ws",
+        "path": "/liqu06dm",
+        "headers": {
+          "Host": "95.133.243.71"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 158",
+      "server": "95.133.243.71",
+      "server_port": 62198,
+      "password": "2XHf484J0ICkczKb",
+      "transport": {
+        "type": "ws",
+        "path": "/liqu06dm",
+        "headers": {
+          "Host": "95.133.243.71"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 157(Free)",
+      "server": "95.133.243.71",
+      "server_port": 62198,
+      "password": "2XHf484J0ICkczKb",
+      "transport": {
+        "type": "ws",
+        "path": "/liqu06dm",
+        "headers": {
+          "Host": "95.133.243.71"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 160(Free)",
+      "server": "62.164.143.241",
+      "server_port": 26292,
+      "password": "tNP3EDsYJy7C0bj5",
+      "transport": {
+        "type": "ws",
+        "path": "/k3sr1xqp",
+        "headers": {
+          "Host": "62.164.143.241"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 138(Free)",
+      "server": "62.164.143.241",
+      "server_port": 26292,
+      "password": "tNP3EDsYJy7C0bj5",
+      "transport": {
+        "type": "ws",
+        "path": "/k3sr1xqp",
+        "headers": {
+          "Host": "62.164.143.241"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 137",
+      "server": "62.164.143.241",
+      "server_port": 26292,
+      "password": "tNP3EDsYJy7C0bj5",
+      "transport": {
+        "type": "ws",
+        "path": "/k3sr1xqp",
+        "headers": {
+          "Host": "62.164.143.241"
+        }
+      }
+    },
+    {
+      "type": "hysteria2",
+      "tag": "KR - South Korea 01",
+      "server": "146.56.116.174",
+      "password": "614e980c",
+      "tls": {
+        "enabled": true,
+        "server_name": "www.bing.com",
+        "insecure": true,
+        "alpn": [
+          "h3"
+        ]
+      },
+      "server_port": 40927
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 64",
+      "server": "37.10.71.132",
+      "server_port": 59672,
+      "password": "75iA8NgrkgmB4lCF",
+      "transport": {
+        "type": "ws",
+        "path": "/bsnplc9w",
+        "headers": {
+          "Host": "37.10.71.132"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 63",
+      "server": "185.158.250.88",
+      "server_port": 14909,
+      "password": "Qwcx8XdjNcDGfDBj",
+      "transport": {
+        "type": "ws",
+        "path": "/r8dmres8",
+        "headers": {
+          "Host": "185.158.250.88"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 62",
+      "server": "45.11.180.121",
+      "server_port": 28621,
+      "password": "lFbmWx7TSG16mQB9",
+      "transport": {
+        "type": "ws",
+        "path": "/53kogt9g",
+        "headers": {
+          "Host": "45.11.180.121"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 61",
+      "server": "91.240.202.216",
+      "server_port": 14334,
+      "password": "HuaL5eVYqe5eYlrH",
+      "transport": {
+        "type": "ws",
+        "path": "/wv5n67a2",
+        "headers": {
+          "Host": "91.240.202.216"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 60",
+      "server": "45.11.180.211",
+      "server_port": 52812,
+      "password": "tcwYvu5XfIfW4957",
+      "transport": {
+        "type": "ws",
+        "path": "/zzx15j8v",
+        "headers": {
+          "Host": "45.11.180.211"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 59",
+      "server": "37.10.71.249",
+      "server_port": 39720,
+      "password": "l8xlsx7gkwvih0fN",
+      "transport": {
+        "type": "ws",
+        "path": "/4d5qpzym",
+        "headers": {
+          "Host": "37.10.71.249"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 58",
+      "server": "91.240.202.198",
+      "server_port": 55307,
+      "password": "FINjiTcFCNYQOLHH",
+      "transport": {
+        "type": "ws",
+        "path": "/8j3suc6c",
+        "headers": {
+          "Host": "91.240.202.198"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 57",
+      "server": "80.77.23.193",
+      "server_port": 30354,
+      "password": "RazrvBGOXjMzhbtl",
+      "transport": {
+        "type": "ws",
+        "path": "/egtuapzz",
+        "headers": {
+          "Host": "80.77.23.193"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 56",
+      "server": "37.10.71.100",
+      "server_port": 52083,
+      "password": "9m4GkjGWBXmY6tW4",
+      "transport": {
+        "type": "ws",
+        "path": "/77sl5h13",
+        "headers": {
+          "Host": "37.10.71.100"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "GB - United Kingdom 55",
+      "server": "37.10.71.75",
+      "server_port": 62090,
+      "password": "OxMyHDqlE1HQzm7j",
+      "transport": {
+        "type": "ws",
+        "path": "/ahj9qmae",
+        "headers": {
+          "Host": "37.10.71.75"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "CA - Canada 01",
+      "server": "193.108.58.187",
+      "server_port": 30503,
+      "password": "f2rEAaEHBCsYupTy",
+      "transport": {
+        "type": "ws",
+        "path": "/apbsvja3",
+        "headers": {
+          "Host": "193.108.58.187"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "AE - United Arab Emirates 01",
+      "server": "95.174.68.65",
+      "server_port": 50232,
+      "password": "LVdJkDZT2AHpLNM2",
+      "transport": {
+        "type": "ws",
+        "path": "/g0ostj9d",
+        "headers": {
+          "Host": "95.174.68.65"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "AE - United Arab Emirates 02",
+      "server": "95.174.68.84",
+      "server_port": 53240,
+      "password": "ftYjLKD0XgQikVNE",
+      "transport": {
+        "type": "ws",
+        "path": "/xj1qzey9",
+        "headers": {
+          "Host": "95.174.68.84"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "AE - United Arab Emirates 03",
+      "server": "89.36.162.114",
+      "server_port": 58072,
+      "password": "kVDEDqNy2xOMSdrE",
+      "transport": {
+        "type": "ws",
+        "path": "/jv2k6db3",
+        "headers": {
+          "Host": "89.36.162.114"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "AE - United Arab Emirates 04",
+      "server": "89.36.162.113",
+      "server_port": 29110,
+      "password": "6p6t9nb9pITFrcXJ",
+      "transport": {
+        "type": "ws",
+        "path": "/40ekanzp",
+        "headers": {
+          "Host": "89.36.162.113"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "AE - United Arab Emirates 05",
+      "server": "89.36.162.112",
+      "server_port": 15385,
+      "password": "CoavJcLhKmZWbEky",
+      "transport": {
+        "type": "ws",
+        "path": "/gba6a746",
+        "headers": {
+          "Host": "89.36.162.112"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "AE - United Arab Emirates 06",
+      "server": "89.36.162.89",
+      "server_port": 58461,
+      "password": "SsRhBVQeP8oBIX4Z",
+      "transport": {
+        "type": "ws",
+        "path": "/jidno30v",
+        "headers": {
+          "Host": "89.36.162.89"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "NL - Netherlands 01",
+      "server": "31.77.162.244",
+      "server_port": 53299,
+      "password": "a7OAd7l3amt767U9",
+      "transport": {
+        "type": "ws",
+        "path": "/6mkvwy8x",
+        "headers": {
+          "Host": "31.77.162.244"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "FI - Finland 01",
+      "server": "31.77.105.193",
+      "server_port": 50678,
+      "password": "CTtO09jfttG42BqA",
+      "transport": {
+        "type": "ws",
+        "path": "/exf03b1u",
+        "headers": {
+          "Host": "31.77.105.193"
+        }
+      }
+    },
+    {
+      "type": "hysteria2",
+      "tag": "DE - Germany 01",
+      "server": "45.86.159.65",
+      "password": "8077f37b",
+      "tls": {
+        "enabled": true,
+        "server_name": "www.bing.com",
+        "insecure": true
+      },
+      "server_ports": [
+        "10000:30000"
+      ],
+      "hop_interval": "30s"
+    },
+    {
+      "type": "trojan",
+      "tag": "DE - Germany 02",
+      "server": "144.31.63.203",
+      "server_port": 49887,
+      "password": "vSbzHJwD5Y3m28zD",
+      "transport": {
+        "type": "ws",
+        "path": "/cfdamved",
+        "headers": {
+          "Host": "144.31.63.203"
+        }
+      }
+    },
+    {
+      "type": "trojan",
+      "tag": "NL - Netherlands 02",
+      "server": "143.20.79.217",
+      "server_port": 40382,
+      "password": "ELQv0h4wTYPdFpVZ",
+      "transport": {
+        "type": "ws",
+        "path": "/9vm81e6q",
+        "headers": {
+          "Host": "143.20.79.217"
+        }
+      }
+    }
+  ],
+  "route": {
+    "auto_detect_interface": true,
+    "final": "Proxy",
+    "rules": [
+      {
+        "inbound": [
+          "tun-in",
+          "mixed-in"
+        ],
+        "action": "sniff"
+      },
+      {
+        "type": "logical",
+        "mode": "or",
+        "rules": [
+          {
+            "port": 53
+          },
+          {
+            "protocol": "dns"
+          }
+        ],
+        "action": "hijack-dns"
+      },
+      {
+        "rule_set": "geosite-category-ads-all",
+        "clash_mode": "rule",
+        "action": "reject"
+      },
+      {
+        "rule_set": "geosite-category-ads-all",
+        "clash_mode": "global",
+        "outbound": "Proxy"
+      },
+      {
+        "clash_mode": "direct",
+        "outbound": "direct"
+      },
+      {
+        "clash_mode": "global",
+        "outbound": "Proxy"
+      },
+      {
+        "domain": [
+          "clash.razord.top",
+          "yacd.metacubex.one",
+          "yacd.haishan.me",
+          "d.metacubex.one"
+        ],
+        "outbound": "direct"
+      },
+      {
+        "ip_is_private": true,
+        "outbound": "direct"
+      },
+      {
+        "rule_set": "geosite-openai",
+        "outbound": "OpenAI"
+      },
+      {
+        "rule_set": [
+          "geosite-youtube",
+          "geoip-google",
+          "geosite-google",
+          "geosite-github"
+        ],
+        "outbound": "Google"
+      },
+      {
+        "rule_set": [
+          "geoip-telegram",
+          "geosite-telegram"
+        ],
+        "outbound": "Telegram"
+      },
+      {
+        "rule_set": [
+          "geoip-twitter",
+          "geosite-twitter"
+        ],
+        "outbound": "Twitter"
+      },
+      {
+        "rule_set": [
+          "geoip-facebook",
+          "geosite-facebook"
+        ],
+        "outbound": "Facebook"
+      },
+      {
+        "rule_set": "geosite-bilibili",
+        "outbound": "BiliBili"
+      },
+      {
+        "rule_set": "geosite-bahamut",
+        "outbound": "Bahamut"
+      },
+      {
+        "rule_set": "geosite-spotify",
+        "outbound": "Spotify"
+      },
+      {
+        "rule_set": "geosite-tiktok",
+        "outbound": "TikTok"
+      },
+      {
+        "rule_set": [
+          "geoip-netflix",
+          "geosite-netflix"
+        ],
+        "outbound": "Netflix"
+      },
+      {
+        "rule_set": "geosite-disney",
+        "outbound": "Disney+"
+      },
+      {
+        "rule_set": [
+          "geoip-apple",
+          "geosite-apple",
+          "geosite-amazon"
+        ],
+        "outbound": "Apple"
+      },
+      {
+        "rule_set": "geosite-microsoft",
+        "outbound": "Microsoft"
+      },
+      {
+        "rule_set": [
+          "geosite-category-games",
+          "geosite-dmm"
+        ],
+        "outbound": "Games"
+      },
+      {
+        "rule_set": [
+          "geosite-hbo",
+          "geosite-primevideo"
+        ],
+        "outbound": "Streaming"
+      },
+      {
+        "rule_set": "geosite-geolocation-!cn",
+        "outbound": "Global"
+      },
+      {
+        "rule_set": [
+          "geoip-cn",
+          "geosite-cn"
+        ],
+        "outbound": "China"
+      }
+    ],
+    "rule_set": [
+      {
+        "tag": "geosite-category-ads-all",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-ads-all.srs"
+      },
+      {
+        "tag": "geosite-openai",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/Toperlock/sing-box-geosite@main/rule/OpenAI.srs"
+      },
+      {
+        "tag": "geosite-youtube",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/youtube.srs"
+      },
+      {
+        "tag": "geoip-google",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/google.srs"
+      },
+      {
+        "tag": "geosite-google",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/google.srs"
+      },
+      {
+        "tag": "geosite-github",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/github.srs"
+      },
+      {
+        "tag": "geoip-telegram",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/telegram.srs"
+      },
+      {
+        "tag": "geosite-telegram",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/telegram.srs"
+      },
+      {
+        "tag": "geoip-twitter",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/twitter.srs"
+      },
+      {
+        "tag": "geosite-twitter",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/twitter.srs"
+      },
+      {
+        "tag": "geoip-facebook",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/facebook.srs"
+      },
+      {
+        "tag": "geosite-facebook",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/facebook.srs"
+      },
+      {
+        "tag": "geosite-bilibili",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/bilibili.srs"
+      },
+      {
+        "tag": "geosite-bahamut",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/bahamut.srs"
+      },
+      {
+        "tag": "geosite-spotify",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/spotify.srs"
+      },
+      {
+        "tag": "geosite-tiktok",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/tiktok.srs"
+      },
+      {
+        "tag": "geoip-netflix",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/netflix.srs"
+      },
+      {
+        "tag": "geosite-netflix",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/netflix.srs"
+      },
+      {
+        "tag": "geosite-disney",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/disney.srs"
+      },
+      {
+        "tag": "geoip-apple",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo-lite/geoip/apple.srs"
+      },
+      {
+        "tag": "geosite-apple",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/apple.srs"
+      },
+      {
+        "tag": "geosite-amazon",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/amazon.srs"
+      },
+      {
+        "tag": "geosite-microsoft",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/microsoft.srs"
+      },
+      {
+        "tag": "geosite-category-games",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/category-games.srs"
+      },
+      {
+        "tag": "geosite-dmm",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/dmm.srs"
+      },
+      {
+        "tag": "geosite-hbo",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/hbo.srs"
+      },
+      {
+        "tag": "geosite-primevideo",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/primevideo.srs"
+      },
+      {
+        "tag": "geosite-geolocation-!cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/geolocation-!cn.srs"
+      },
+      {
+        "tag": "geoip-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geoip/cn.srs"
+      },
+      {
+        "tag": "geosite-cn",
+        "type": "remote",
+        "format": "binary",
+        "url": "https://testingcf.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@sing/geo/geosite/cn.srs"
+      }
+    ],
+    "default_http_client": "rules-direct",
+    "default_domain_resolver": "localDns"
+  },
+  "http_clients": [
+    {
+      "tag": "rules-direct"
+    }
+  ]
+}
